@@ -1,0 +1,77 @@
+# Мониторинг auto08
+
+Требования к подключению новых сервисов и задач — **`req_mon.md`**. Этот файл описывает
+устройство и установку.
+
+## Три слоя
+
+1. **`alert@.service`** — systemd сам сообщает об отказе юнита через `OnFailure=`.
+2. **`check.sh` + `host-check.timer`** — проверки состояния раз в 15 минут; тревога
+   только при смене состояния. Сюда же входит просрочка cron-задач.
+3. **Пинг healthchecks.io** из `check.sh` — молчание дольше периода означает, что лёг
+   весь хост и первые два слоя сообщить уже не могут.
+
+## Состав
+
+| Файл | Назначение |
+|---|---|
+| `alert.sh` | Отправка тревоги в Telegram. Общая для всех слоёв. |
+| `check.sh` | Проверки состояния: юниты, диск, память, Postgres, обход лент, источники, сертификат, консоль снаружи, журнал, просрочка задач. |
+| `runjob.sh` | Обёртка cron-задач: запись прогона в `job_runs`, тревога при ненулевом коде. |
+| `alert@.service` | Шаблон-алертер для `OnFailure`. |
+| `host-check.service` / `.timer` | Проверки каждые 15 минут. |
+| `host-summary.service` / `.timer` | Сводка в 09:00 по Москве. |
+| `seed_jobs.sql` | Реестр ожидаемого ритма задач (`job_schedule`). |
+| `crontab.ubuntu` | Эталон crontab пользователя `ubuntu` — все задачи через `runjob.sh`. |
+| `logrotate-bds` | Ротация логов telegram_bds и wiki_visualizer. |
+
+## Установка
+
+    sudo install -m 750 -g monitoring alert.sh check.sh /opt/monitoring/
+    sudo install -m 755 runjob.sh /opt/monitoring/
+    sudo install -m 644 alert@.service host-check.* host-summary.* /etc/systemd/system/
+    sudo install -m 644 logrotate-bds /etc/logrotate.d/bds-projects
+    sudo -u postgres psql -d stackradar -f seed_jobs.sql
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now host-check.timer host-summary.timer
+
+`/etc/monitoring.env` (640, `root:monitoring`) — не в git:
+
+    TELEGRAM_BOT_TOKEN=...
+    ALERT_CHAT_ID=...
+    CONSOLE_URL=https://stackradar.bigdataschool.ru/
+    CERT_PATH=/etc/letsencrypt/live/stackradar.bigdataschool.ru/cert.pem
+    HC_PING_URL=https://hc-ping.com/...
+
+Пользователь, от которого работают cron-задачи, состоит в группе `monitoring` —
+иначе обёртка не прочитает env и не отправит тревогу.
+
+## Повторную тревогу об одной и той же падающей задаче `runjob.sh` шлёт не чаще, чем раз в
+`ALERT_REPEAT_HOURS` (по умолчанию 6). Прогон всё равно пишется в `job_runs` — заглушается
+только сообщение.
+
+**Задача из cron, которой нужен `/etc/stack-radar.env`, обязана запускаться от `stackradar`:**
+файл имеет права `640 root:stackradar`, и строка crontab пользователя `ubuntu` без
+`sudo -u stackradar` падает на `Permission denied`, а следом на `unauthorized` — без
+`CRON_SECRET` роуты отказывают.
+
+## Подключение нового сервиса
+
+    sudo mkdir -p /etc/systemd/system/<юнит>.service.d
+    printf '[Unit]\nOnFailure=alert@%%n.service\n' \
+      | sudo tee /etc/systemd/system/<юнит>.service.d/onfailure.conf
+    sudo systemctl daemon-reload
+
+## Подключение новой задачи по расписанию
+
+    <расписание> /opt/monitoring/runjob.sh <имя> -- <команда> >> <лог> 2>&1
+
+плюс строка в `job_schedule` с ожидаемым интервалом и фрагмент в `logrotate-bds`.
+Полный список требований и чек-лист приёмки — `req_mon.md`.
+
+## Проверка
+
+    sudo /opt/monitoring/check.sh            # разовый прогон, печатает итог
+    sudo systemctl start host-summary        # прислать сводку сейчас
+    sudo cat /var/lib/monitoring/state       # текущее состояние всех проверок
+    sudo -u postgres psql -d stackradar -c "select * from job_runs order by id desc limit 10"

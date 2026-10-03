@@ -1,0 +1,7 @@
+[Unit]
+Description=Тревога в Telegram об отказе %i
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/monitoring.env
+ExecStart=/opt/monitoring/alert.sh %i

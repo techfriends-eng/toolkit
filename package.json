@@ -1,0 +1,67 @@
+{
+  "name": "@techfriends-eng/toolkit",
+  "version": "0.1.0",
+  "description": "Переиспользуемые модули techfriends-eng: Telegram, ingest, LLM, БД, конфиг",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./telegram": {
+      "types": "./dist/telegram/index.d.ts",
+      "default": "./dist/telegram/index.js"
+    },
+    "./ingest": {
+      "types": "./dist/ingest/index.d.ts",
+      "default": "./dist/ingest/index.js"
+    },
+    "./llm": {
+      "types": "./dist/llm/index.d.ts",
+      "default": "./dist/llm/index.js"
+    },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "default": "./dist/db/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "default": "./dist/config/index.js"
+    },
+    "./async": {
+      "types": "./dist/async/index.d.ts",
+      "default": "./dist/async/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "ops"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "test:unit": "node --experimental-strip-types --test 'src/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . && prettier --check ."
+  },
+  "peerDependencies": {
+    "pg": "^8.11.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.14.0",
+    "pg": "^8.16.3",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
+  }
+}

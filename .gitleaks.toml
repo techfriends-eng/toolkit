@@ -1,0 +1,7 @@
+# Правила gitleaks по умолчанию плюс исключения проекта.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "шаблоны env без значений"
+paths = ['''deploy/.*\.env\.example$''']

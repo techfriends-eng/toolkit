@@ -1,0 +1,17 @@
+# Changelog
+
+Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии по [SemVer](https://semver.org/lang/ru/).
+
+## [Unreleased]
+
+## [0.1.0] — 2026-10-03
+
+### Добавлено
+- `telegram`: `createTelegram` (новый, с темами и нарезкой), `splitTelegram`, `escapeHtml`,
+  `verdictOf`/`verdictForCard` — из stack-radar.
+- `ingest`: разбор RSS/Atom и t.me/s, загрузка с лимитами, свежесть, дедуп URL — из stack-radar.
+- `llm`: ключ кэша с версией промпта. Переменная переименована: `XAI_PROMPT_VERSION` → `LLM_PROMPT_VERSION`.
+- `db`: мигратор и план миграций — из stack-radar.
+- `config`: `readSecret`.
+- `async`: `singleFlight`.
+- `ops/monitoring`: `runjob.sh`, `alert.sh`, `alert@.service`, `req_mon.md` — копия из stack-radar.
