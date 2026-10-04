@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-04
+
+### Добавлено
+- `wp`: `createWp` — клиент WordPress REST с типом записи параметром (posts, encyclopedia).
+- `filter`: `createTopicMatcher` — механизм профильного фильтра тем; темы и бизнес-правила — в проекте.
+- `llm`: `createChat` — OpenAI-совместимый вызов с повторами (429/5xx/сеть, пауза 15 с × n) и
+  подключаемым кэшем; окончательный отказ — `null`.
+- `telegram`: карточки (`callbackData`, `parseCallback`, `inlineKeyboard`, `markedText`, `closeCard`) и
+  ядро поллера (`createPoller`, `fromChat`).
+
 ### Добавлено
 - RUNBOOK (выпуск версии, установка в проекте), `ops/selfcheck.sh` (гейт одной командой),
   `deploy/toolkit.env.example` — переменные, которые читают модули.
