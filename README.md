@@ -9,7 +9,7 @@ handbook: v0.1
 ## Установка
 
 ```sh
-npm install "github:techfriends-eng/toolkit#v0.1.0"
+npm install "github:techfriends-eng/toolkit#v0.2.0"
 ```
 
 Версия — это git-тег. Проект пинует точный тег, а обновление делается отдельным коммитом с прогоном гейта.
@@ -45,10 +45,10 @@ await tg.sendMessage({ chatId: process.env.BDS_SERVICE_CHAT_ID!, threadId: 620, 
 - Профильный фильтр тем и ru-relevance (`ingest/keywords.ts`, `telegram/ru-relevance.ts`): фильтр
   получит конфиг тем параметром.
 - LLM-вызов с кэшем в Postgres и ретраями (`xai.ts` + ретраи из telegram_bds `llm_caption.sh`).
-- `settings` (kv в `app_settings`, env важнее), WordPress-клиент (`wp/*`).
+- `settings` (kv в `app_settings`, env важнее) и WordPress-клиент (`wp/*`): в stack-radar они читают env и пул
+  БД напрямую, для переноса их надо параметризовать.
 - `ops/monitoring/check.sh` с разделением на общие проверки хоста и доменные плагины,
   `install.sh`, шаблон MCP-шлюза `ops/mcp-gateway`, `ops/lib/telegram.sh` для bash-проектов.
-- `ops/monitoring/runjob.sh` пишет в БД `stackradar`. Имя БД нужно вынести в `/etc/monitoring.env`.
 
 ## Разработка
 

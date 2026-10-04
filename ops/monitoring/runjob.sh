@@ -5,9 +5,12 @@
 #
 # Вывод команды идёт как обычно в stdout/stderr, поэтому редиректы
 # в crontab продолжают писать те же логи. Дополнительно пишется строка
-# в таблицу job_runs базы stackradar, а при ненулевом коде возврата
+# в таблицу job_runs базы $MONITORING_DB (по умолчанию stackradar — так исторически на auto08), а при ненулевом коде возврата
 # уходит тревога в Telegram с хвостом вывода.
 set -uo pipefail
+
+# База с job_runs и job_schedule. На auto08 это stackradar; на новом хосте — своя.
+DB="${MONITORING_DB:-stackradar}"
 
 NAME="${1:-}"
 shift || true
@@ -26,7 +29,7 @@ START=$(date +%s)
 CODE=$?
 DUR=$(( $(date +%s) - START ))
 
-sudo -u postgres psql -qtAX -d stackradar >/dev/null 2>&1 <<SQL
+sudo -u postgres psql -qtAX -d "$DB" >/dev/null 2>&1 <<SQL
 create table if not exists job_runs (
   id bigserial primary key,
   job text not null,
@@ -47,7 +50,7 @@ REPEAT_H="${ALERT_REPEAT_HOURS:-6}"
 should_alert() {
   [ "$CODE" -eq 0 ] && return 1
   local recent
-  recent=$(sudo -u postgres psql -qtAX -d stackradar -c \
+  recent=$(sudo -u postgres psql -qtAX -d "$DB" -c \
     "select count(*) from job_runs
       where job = '${NAME//\'/}' and exit_code <> 0
         and finished_at > now() - interval '${REPEAT_H} hours'" 2>/dev/null | tr -d ' ')
@@ -58,11 +61,11 @@ should_alert() {
 if should_alert; then
   TAIL=$(tail -c 1200 "$TMP")
   /opt/monitoring/alert.sh "" "🔴 Задача ${NAME} упала (код ${CODE}, ${DUR} с)
-хост: auto08
+хост: $(hostname)
 
 ${TAIL}
 
-Разбор: sudo -u postgres psql -d stackradar -c \"select * from job_runs where job='${NAME}' order by id desc limit 5\"
+Разбор: sudo -u postgres psql -d ${DB} -c \"select * from job_runs where job='${NAME}' order by id desc limit 5\"
 Повторные тревоги по этой задаче заглушены на ${REPEAT_H} ч."
 fi
 

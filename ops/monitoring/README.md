@@ -1,4 +1,4 @@
-# Мониторинг auto08
+# Мониторинг хоста
 
 Требования к подключению новых сервисов и задач — **`req_mon.md`**. Этот файл описывает
 устройство и установку.
@@ -31,7 +31,7 @@
     sudo install -m 755 runjob.sh /opt/monitoring/
     sudo install -m 644 alert@.service host-check.* host-summary.* /etc/systemd/system/
     sudo install -m 644 logrotate-bds /etc/logrotate.d/bds-projects
-    sudo -u postgres psql -d stackradar -f seed_jobs.sql
+    sudo -u postgres psql -d "${MONITORING_DB:-stackradar}" -f seed_jobs.sql
     sudo systemctl daemon-reload
     sudo systemctl enable --now host-check.timer host-summary.timer
 
@@ -39,8 +39,8 @@
 
     TELEGRAM_BOT_TOKEN=...
     ALERT_CHAT_ID=...
-    CONSOLE_URL=https://stackradar.bigdataschool.ru/
-    CERT_PATH=/etc/letsencrypt/live/stackradar.bigdataschool.ru/cert.pem
+    CONSOLE_URL=https://console.example.com/
+    CERT_PATH=/etc/letsencrypt/live/console.example.com/cert.pem
     HC_PING_URL=https://hc-ping.com/...
 
 Пользователь, от которого работают cron-задачи, состоит в группе `monitoring` —
@@ -50,9 +50,9 @@
 `ALERT_REPEAT_HOURS` (по умолчанию 6). Прогон всё равно пишется в `job_runs` — заглушается
 только сообщение.
 
-**Задача из cron, которой нужен `/etc/stack-radar.env`, обязана запускаться от `stackradar`:**
-файл имеет права `640 root:stackradar`, и строка crontab пользователя `ubuntu` без
-`sudo -u stackradar` падает на `Permission denied`, а следом на `unauthorized` — без
+**Задача из cron, которой нужен `/etc/<app>.env`, обязана запускаться от `<app>`:**
+файл имеет права `640 root:<app>`, и строка crontab пользователя `ubuntu` без
+`sudo -u <app>` падает на `Permission denied`, а следом на `unauthorized` — без
 `CRON_SECRET` роуты отказывают.
 
 ## Подключение нового сервиса
@@ -74,4 +74,4 @@
     sudo /opt/monitoring/check.sh            # разовый прогон, печатает итог
     sudo systemctl start host-summary        # прислать сводку сейчас
     sudo cat /var/lib/monitoring/state       # текущее состояние всех проверок
-    sudo -u postgres psql -d stackradar -c "select * from job_runs order by id desc limit 10"
+    sudo -u postgres psql -d "${MONITORING_DB:-stackradar}" -c "select * from job_runs order by id desc limit 10"

@@ -3,9 +3,11 @@
 # Вызов 1: alert.sh <имя-юнита>            — из alert@.service по OnFailure
 # Вызов 2: alert.sh "" "произвольный текст" — из check.sh
 set -uo pipefail
+# shellcheck source=/dev/null  # env-файлы хоста, в репо их нет
 [ -f /etc/monitoring.env ] && . /etc/monitoring.env
 # Общий конфиг служебного чата и тем (T4): отсюда берётся тема Логи,
 # если ALERT_THREAD_ID не задан явно.
+# shellcheck source=/dev/null
 [ -r /etc/bds-telegram.env ] && . /etc/bds-telegram.env
 
 UNIT="${1:-}"
@@ -30,7 +32,7 @@ fi
 if [ -z "$TEXT" ]; then
   LOG=$(journalctl -u "$UNIT" -n 12 --no-pager 2>/dev/null | tail -12)
   TEXT="🔴 Отказ юнита: ${UNIT}
-хост: $(hostname) (auto08)
+хост: $(hostname)
 
 ${LOG}
 
