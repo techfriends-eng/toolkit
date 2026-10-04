@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Функции проверок вызываются косвенно, через check "$@" — shellcheck этого не видит.
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329  # SC2317 — имя этой проверки в старых shellcheck (CI на ubuntu)
 # Гейт toolkit одной командой. Выход 0 — можно выпускать. Запуск из корня репо: ops/selfcheck.sh
 set -euo pipefail
 
