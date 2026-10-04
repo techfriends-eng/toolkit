@@ -9,6 +9,9 @@
 # уходит тревога в Telegram с хвостом вывода.
 set -uo pipefail
 
+# MONITORING_DB и MONITOR_NAME — из /etc/monitoring.env (ubuntu в группе monitoring, файл ему читаем).
+# shellcheck source=/dev/null
+[ -r /etc/monitoring.env ] && . /etc/monitoring.env
 # База с job_runs и job_schedule. На auto08 это stackradar; на новом хосте — своя.
 DB="${MONITORING_DB:-stackradar}"
 
@@ -61,7 +64,7 @@ should_alert() {
 if should_alert; then
   TAIL=$(tail -c 1200 "$TMP")
   /opt/monitoring/alert.sh "" "🔴 Задача ${NAME} упала (код ${CODE}, ${DUR} с)
-хост: $(hostname)
+хост: ${MONITOR_NAME:-$(hostname)}
 
 ${TAIL}
 

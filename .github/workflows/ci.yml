@@ -19,6 +19,8 @@ jobs:
       - run: npm run test:unit
       - run: npm run typecheck
       - run: npm run lint
+      - name: bash tests
+        run: bash ops/lib/tg.test.sh
       - name: shellcheck
         run: |
           files=$(git ls-files '*.sh' '.githooks/*')

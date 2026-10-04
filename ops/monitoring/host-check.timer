@@ -1,0 +1,10 @@
+[Unit]
+Description=Проверка состояния хоста каждые 15 минут
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Unit=host-check.service
+
+[Install]
+WantedBy=timers.target

@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-05
+
+### Добавлено
+- `ops/lib/tg.sh` — Telegram для bash-проектов с тестами без сети (`ops/lib/tg.test.sh`): тема только если
+  задана, подписи через `--form-string`, ошибка Telegram — код 1, а не «null».
+- `ops/monitoring`: `check.sh` с подключаемыми проверками проектов (`checks.d/*.sh`), списки юнитов и репо
+  в `MONITOR_UNITS`/`MONITOR_REPOS`, режим `CHECK_DRY=1`; юниты таймеров; `install.sh`.
+
+### Изменено
+- `runjob.sh`, `alert.sh`: имя хоста в сообщениях — `MONITOR_NAME` (по умолчанию `hostname`).
+
+
 ## [0.3.0] — 2026-10-04
 
 ### Добавлено

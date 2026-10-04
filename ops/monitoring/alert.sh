@@ -32,7 +32,7 @@ fi
 if [ -z "$TEXT" ]; then
   LOG=$(journalctl -u "$UNIT" -n 12 --no-pager 2>/dev/null | tail -12)
   TEXT="🔴 Отказ юнита: ${UNIT}
-хост: $(hostname)
+хост: ${MONITOR_NAME:-$(hostname)}
 
 ${LOG}
 

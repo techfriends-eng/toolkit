@@ -16,37 +16,37 @@
 | Файл | Назначение |
 |---|---|
 | `alert.sh` | Отправка тревоги в Telegram. Общая для всех слоёв. |
-| `check.sh` | Проверки состояния: юниты, диск, память, Postgres, обход лент, источники, сертификат, консоль снаружи, журнал, просрочка задач. |
+| `check.sh` | Общие проверки: юниты (`MONITOR_UNITS`), диск, память, Postgres, просрочка задач, сертификат, консоль, незапушенные коммиты (`MONITOR_REPOS`), журнал. Проверки проектов — `checks.d/*.sh`. `CHECK_DRY=1` — только напечатать результаты. |
+| `checks.d/` | Подключаемые проверки проектов; лежат в репо своих проектов (`ops/checks.d/`), ставятся копированием. |
 | `runjob.sh` | Обёртка cron-задач: запись прогона в `job_runs`, тревога при ненулевом коде. |
 | `alert@.service` | Шаблон-алертер для `OnFailure`. |
 | `host-check.service` / `.timer` | Проверки каждые 15 минут. |
 | `host-summary.service` / `.timer` | Сводка в 09:00 по Москве. |
-| `seed_jobs.sql` | Реестр ожидаемого ритма задач (`job_schedule`). |
-| `crontab.ubuntu` | Эталон crontab пользователя `ubuntu` — все задачи через `runjob.sh`. |
-| `logrotate-bds` | Ротация логов telegram_bds и wiki_visualizer. |
+| `install.sh` | Установка всего перечисленного, идемпотентно. |
 
 ## Установка
 
-    sudo install -m 750 -g monitoring alert.sh check.sh /opt/monitoring/
-    sudo install -m 755 runjob.sh /opt/monitoring/
-    sudo install -m 644 alert@.service host-check.* host-summary.* /etc/systemd/system/
-    sudo install -m 644 logrotate-bds /etc/logrotate.d/bds-projects
-    sudo -u postgres psql -d "${MONITORING_DB:-stackradar}" -f seed_jobs.sql
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now host-check.timer host-summary.timer
+    sudo ops/monitoring/install.sh
+    sudo install -m 640 -g monitoring <репо проекта>/ops/checks.d/<проект>.sh /opt/monitoring/checks.d/
+    cat <репо проекта>/ops/job_schedule.sql | sudo -u postgres psql -d "$MONITORING_DB"
 
 `/etc/monitoring.env` (640, `root:monitoring`) — не в git:
 
     TELEGRAM_BOT_TOKEN=...
     ALERT_CHAT_ID=...
+    ALERT_THREAD_ID=...           # тема «Логи»
+    MONITORING_DB=stackradar
+    MONITOR_NAME=auto08
+    MONITOR_UNITS="stack-radar nginx postgresql@16-main"
+    MONITOR_REPOS="/opt/stack-radar /home/ubuntu/telegram_bds"
     CONSOLE_URL=https://console.example.com/
+    CONSOLE_EXPECT=401
     CERT_PATH=/etc/letsencrypt/live/console.example.com/cert.pem
     HC_PING_URL=https://hc-ping.com/...
 
-Пользователь, от которого работают cron-задачи, состоит в группе `monitoring` —
-иначе обёртка не прочитает env и не отправит тревогу.
+## Повторные тревоги
 
-## Повторную тревогу об одной и той же падающей задаче `runjob.sh` шлёт не чаще, чем раз в
+Повторную тревогу об одной и той же падающей задаче `runjob.sh` шлёт не чаще, чем раз в
 `ALERT_REPEAT_HOURS` (по умолчанию 6). Прогон всё равно пишется в `job_runs` — заглушается
 только сообщение.
 

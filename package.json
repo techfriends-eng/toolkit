@@ -1,6 +1,6 @@
 {
   "name": "@techfriends-eng/toolkit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Переиспользуемые модули techfriends-eng: Telegram, ingest, LLM, БД, конфиг",
   "private": true,
   "type": "module",

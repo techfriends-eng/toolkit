@@ -1,0 +1,7 @@
+[Unit]
+Description=Утренняя сводка по хосту
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/monitoring.env
+ExecStart=/opt/monitoring/check.sh --summary

@@ -9,7 +9,7 @@ handbook: v0.1
 ## Установка
 
 ```sh
-npm install "github:techfriends-eng/toolkit#v0.3.0"
+npm install "github:techfriends-eng/toolkit#v0.4.0"
 ```
 
 Версия — это git-тег. Проект пинует точный тег, а обновление делается отдельным коммитом с прогоном гейта.
@@ -28,7 +28,8 @@ npm install "github:techfriends-eng/toolkit#v0.3.0"
 | `@techfriends-eng/toolkit/db` | `migrate` (файл = транзакция, учёт в `_migrations`), `pendingMigrations`. `pg` — peer-зависимость | stack-radar `scripts/migrate.mjs` | — |
 | `@techfriends-eng/toolkit/config` | `readSecret(NAME)`: переменная или файл из `NAME_FILE` | stack-radar `site/pick-card.ts` | — |
 | `@techfriends-eng/toolkit/async` | `singleFlight`: не больше одного вызова за раз (поллеры) | stack-radar `src/lib/single-flight.ts` | [telegram](https://github.com/techfriends-eng/handbook/blob/main/gotchas/telegram.md#one-poller) |
-| `ops/monitoring/` | `runjob.sh`, `alert.sh`, `alert@.service`, контракт подключения `req_mon.md` | stack-radar `ops/monitoring/` | [monitoring](https://github.com/techfriends-eng/handbook/blob/main/gotchas/monitoring.md) |
+| `ops/monitoring/` | общий `check.sh` + подключаемые проверки проектов (`checks.d/`), `runjob.sh`, `alert.sh`, юниты таймеров, `install.sh`; хост ставит с тега: `git clone` в `/opt/toolkit`, `sudo ops/monitoring/install.sh` | stack-radar `ops/monitoring/` | [monitoring](https://github.com/techfriends-eng/handbook/blob/main/gotchas/monitoring.md) |
+| `ops/lib/tg.sh` | Telegram для bash: `tg_send_text/photo/document`, `tg_get_updates`, `tg_delete_messages`; ошибки — код 1 и описание в stderr; тесты `ops/lib/tg.test.sh` | wiki_visualizer `scripts/lib/telegram.sh` | [telegram](https://github.com/techfriends-eng/handbook/blob/main/gotchas/telegram.md) |
 
 Пример:
 
