@@ -98,3 +98,9 @@ test("fromChat: кнопка проверяется по сообщению-ка
   assert.equal(accept(press(7)), true);
   assert.equal(accept(press(8)), false);
 });
+
+test("fromChat видит и посты канала", () => {
+  const accept = fromChat({ chatId: -5 });
+  assert.equal(accept({ update_id: 1, channel_post: { message_id: 1, chat: { id: -5 } } }), true);
+  assert.equal(accept({ update_id: 2, channel_post: { message_id: 1, chat: { id: -6 } } }), false);
+});

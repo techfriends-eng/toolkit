@@ -13,6 +13,8 @@ import type { TelegramClient } from "./api.ts";
 export type TgUpdate = {
   update_id: number;
   message?: TgMessage;
+  /** Пост в канале, где бот — администратор. */
+  channel_post?: TgMessage;
   callback_query?: {
     id: string;
     from?: { id: number };
@@ -78,7 +80,7 @@ export function fromChat(f: {
   senderId?: number;
 }): (update: TgUpdate) => boolean {
   return (update) => {
-    const message = update.message ?? update.callback_query?.message;
+    const message = update.message ?? update.channel_post ?? update.callback_query?.message;
     const sender = update.message?.from?.id ?? update.callback_query?.from?.id;
     if (!message || String(message.chat?.id ?? "") !== String(f.chatId)) return false;
     if (f.threadIds?.length && !f.threadIds.includes(message.message_thread_id ?? 0)) return false;

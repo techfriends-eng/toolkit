@@ -9,7 +9,7 @@ handbook: v0.1
 ## Установка
 
 ```sh
-npm install "github:techfriends-eng/toolkit#v0.4.0"
+npm install "github:techfriends-eng/toolkit#v0.4.1"
 ```
 
 Версия — это git-тег. Проект пинует точный тег, а обновление делается отдельным коммитом с прогоном гейта.
@@ -41,12 +41,12 @@ const tg = createTelegram({ token: readSecret("TELEGRAM_BOT_TOKEN") });
 await tg.sendMessage({ chatId: process.env.BDS_SERVICE_CHAT_ID!, threadId: 620, text: "готово" });
 ```
 
-## Что ещё не перенесено (план v0.4)
+## Что дальше
 
-- Перевод поллеров и карточек stack-radar на `createPoller`/`closeCard` — с проверкой на живой карточке.
-- `ops/monitoring/check.sh`: общие проверки хоста отдельно от проверок проектов, `install.sh`.
-- `ops/lib/telegram.sh` для bash-проектов и перевод на него wiki_visualizer и telegram_bds.
-- Шаблон MCP-шлюза хоста (`ops/mcp-gateway`).
+- Перевод поллеров и карточек stack-radar на `createPoller`/`closeCard` и bash-проектов на `ops/lib/tg.sh` —
+  подготовлено в ветках проектов, деплой с проверкой на живой карточке и анонсе.
+- Шаблон MCP-шлюза хоста — не делается, пока хост один: шлюз auto08 живёт в stack-radar `ops/mcp-gateway`.
+  Со вторым хостом — по образцу `checks.d`: общий сервер + подключаемые действия проектов.
 
 ## Разработка
 
