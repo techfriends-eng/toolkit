@@ -3,6 +3,7 @@
 # Тревога уходит в Telegram только при СМЕНЕ состояния проверки (handbook gotchas/monitoring.md#state-change).
 #   --summary      сводка по всем проверкам независимо от состояния
 #   CHECK_DRY=1    только напечатать результаты (имя=уровень|значение) и выйти: без тревог и записи состояния
+#   CHECK_DRY=1 --summary   напечатать сводку вместо отправки
 #
 # Общие проверки — здесь. Проверки проектов — подключаемые файлы $CHECKS_DIR/*.sh (лежат в репо
 # своих проектов, ops/checks.d/), им доступны note, grade, grade_low и $DB.
@@ -24,6 +25,8 @@ STATE_DIR=/var/lib/monitoring
 STATE="$STATE_DIR/state"
 SUMMARY_MODE=0
 [ "${1:-}" = "--summary" ] && SUMMARY_MODE=1
+# shellcheck source=/dev/null  # рядом с check.sh
+. "$(dirname "$0")/summary.sh"
 
 declare -A SEV VAL HINT
 worst=ok
@@ -173,6 +176,7 @@ errs=${errs:-0}
 note journal "$(grade "$errs" 10 60)" "${errs} ошибок в журнале за час" "sudo journalctl -p err --since '-1 hour' --no-pager"
 
 if [ -n "${CHECK_DRY:-}" ]; then
+  [ "$SUMMARY_MODE" = 1 ] && { render_summary; exit 0; }
   for k in $(printf '%s\n' "${!SEV[@]}" | sort); do echo "$k=${SEV[$k]}|${VAL[$k]}"; done
   exit 0
 fi
@@ -218,16 +222,7 @@ SQL
 
 # --- отправка ----------------------------------------------------------------
 if [ "$SUMMARY_MODE" = 1 ]; then
-  body="📋 Сводка по ${NAME}, $(date '+%d.%m %H:%M')
-аптайм: $(uptime -p)
-"
-  for k in $(printf '%s\n' "${!SEV[@]}" | sort); do
-    icon=🟢
-    [ "${SEV[$k]}" = warn ] && icon=🟡
-    [ "${SEV[$k]}" = crit ] && icon=🔴
-    body="${body}${icon} ${k}: ${VAL[$k]}
-"
-  done
+  body=$(render_summary)
   /opt/monitoring/alert.sh "" "$body"
 elif [ -n "$changed" ]; then
   /opt/monitoring/alert.sh "" "Состояние ${NAME} изменилось:${changed}"

@@ -11,7 +11,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 getent group monitoring >/dev/null || groupadd --system monitoring
 install -d -m 755 /opt/monitoring
 install -d -m 750 -g monitoring /opt/monitoring/checks.d
-install -m 750 -g monitoring "$HERE/check.sh" "$HERE/alert.sh" /opt/monitoring/
+install -m 750 -g monitoring "$HERE/check.sh" "$HERE/summary.sh" "$HERE/alert.sh" /opt/monitoring/
 install -m 755 "$HERE/runjob.sh" /opt/monitoring/
 install -m 644 "$HERE/README.md" "$HERE/req_mon.md" /opt/monitoring/
 install -m 644 "$HERE"/alert@.service "$HERE"/host-check.service "$HERE"/host-check.timer \

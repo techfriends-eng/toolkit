@@ -17,6 +17,7 @@
 |---|---|
 | `alert.sh` | Отправка тревоги в Telegram. Общая для всех слоёв. |
 | `check.sh` | Общие проверки: юниты (`MONITOR_UNITS`), диск, память, Postgres, просрочка задач, сертификат, консоль, незапушенные коммиты (`MONITOR_REPOS`), журнал. Проверки проектов — `checks.d/*.sh`. `CHECK_DRY=1` — только напечатать результаты. |
+| `summary.sh` | Утренняя сводка по категориям: проблемы целиком, остальное одной строкой на группу, задачи — «N/M в срок». Группы проверок проектов — `MONITOR_GROUPS`, короткое «ок» — `MONITOR_QUIET`. Тесты — `summary.test.sh`. |
 | `checks.d/` | Подключаемые проверки проектов; лежат в репо своих проектов (`ops/checks.d/`), ставятся копированием. |
 | `runjob.sh` | Обёртка cron-задач: запись прогона в `job_runs`, тревога при ненулевом коде. |
 | `alert@.service` | Шаблон-алертер для `OnFailure`. |
@@ -43,6 +44,8 @@
     CONSOLE_EXPECT=401
     CERT_PATH=/etc/letsencrypt/live/console.example.com/cert.pem
     HC_PING_URL=https://hc-ping.com/...
+    MONITOR_GROUPS="📥 Сбор=ingest,sources;🎯 Отбор=pick_*,tg_poll_*;📢 Публикация=tg_queue"
+    MONITOR_QUIET="pick_stuck tg_poll_conflict"
 
 ## Повторные тревоги
 
@@ -73,5 +76,6 @@
 
     sudo /opt/monitoring/check.sh            # разовый прогон, печатает итог
     sudo systemctl start host-summary        # прислать сводку сейчас
+    sudo CHECK_DRY=1 /opt/monitoring/check.sh --summary   # напечатать сводку, не отправляя
     sudo cat /var/lib/monitoring/state       # текущее состояние всех проверок
     sudo -u postgres psql -d "${MONITORING_DB:-stackradar}" -c "select * from job_runs order by id desc limit 10"
