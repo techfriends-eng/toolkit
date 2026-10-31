@@ -9,7 +9,7 @@ handbook: v0.1
 ## Установка
 
 ```sh
-npm install "github:techfriends-eng/toolkit#v0.4.1"
+npm install "github:techfriends-eng/toolkit#v0.6.0"
 ```
 
 Версия — это git-тег. Проект пинует точный тег, а обновление делается отдельным коммитом с прогоном гейта.
@@ -24,7 +24,7 @@ npm install "github:techfriends-eng/toolkit#v0.4.1"
 | `@techfriends-eng/toolkit/wp` | `createWp({ baseUrl, postType })`: find/create/update/getStatus/publish/uploadMedia/lookupPublished | stack-radar `src/lib/wp/client.ts` | [wordpress](https://github.com/techfriends-eng/handbook/blob/main/gotchas/wordpress.md) |
 | `@techfriends-eng/toolkit/filter` | `createTopicMatcher(patterns)`: `match`, `profileHits` (заголовок или ≥2 в теле), `explain` | stack-radar `src/lib/ingest/keywords.ts` | [filters-topics](https://github.com/techfriends-eng/handbook/blob/main/gotchas/filters-topics.md) |
 | `@techfriends-eng/toolkit/ingest` | `parseFeed` (RSS/Atom), `parseTelegramChannel` (t.me/s), `fetchText` с таймаутом и лимитом байтов, `sanitizePgText`, свежесть по дате из URL, `canonicalArticleUrl` (дедуп utm) | stack-radar `src/lib/ingest/*` | [filters-topics](https://github.com/techfriends-eng/handbook/blob/main/gotchas/filters-topics.md) |
-| `@techfriends-eng/toolkit/llm` | `buildCacheKey` с версией промпта (`LLM_PROMPT_VERSION`); `createChat` (v0.3) — OpenAI-совместимый вызов с повторами на 429/5xx и подключаемым кэшем | stack-radar `src/lib/xai-cache-key.ts` | [llm](https://github.com/techfriends-eng/handbook/blob/main/gotchas/llm.md) |
+| `@techfriends-eng/toolkit/llm` | `buildCacheKey` с версией промпта (`LLM_PROMPT_VERSION`); `createChat` (v0.3) — OpenAI-совместимый вызов с повторами на 429/5xx и подключаемым кэшем; `completeDetailed` и `body` (v0.6) — расход, обрезка, поля провайдера | stack-radar `src/lib/xai-cache-key.ts` | [llm](https://github.com/techfriends-eng/handbook/blob/main/gotchas/llm.md) |
 | `@techfriends-eng/toolkit/db` | `migrate` (файл = транзакция, учёт в `_migrations`), `pendingMigrations`. `pg` — peer-зависимость | stack-radar `scripts/migrate.mjs` | — |
 | `@techfriends-eng/toolkit/config` | `readSecret(NAME)`: переменная или файл из `NAME_FILE` | stack-radar `site/pick-card.ts` | — |
 | `@techfriends-eng/toolkit/async` | `singleFlight`: не больше одного вызова за раз (поллеры) | stack-radar `src/lib/single-flight.ts` | [telegram](https://github.com/techfriends-eng/handbook/blob/main/gotchas/telegram.md#one-poller) |

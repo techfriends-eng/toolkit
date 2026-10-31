@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-31
+
+### Добавлено
+- `llm`: `ChatRequest.body` — дополнительные поля тела запроса провайдера (например,
+  `reasoning: {effort}` у OpenRouter: рассуждение Claude 5 выключить нельзя, а `reasoning.max_tokens`
+  модель не соблюдает, см. handbook `gotchas/llm.md#claude5-reasoning`).
+- `llm`: `completeDetailed(req)` — текст, `finishReason` (`length` — ответ обрезан) и расход: токены,
+  токены рассуждения, стоимость `usage.cost`. Обрезанный ответ в кэш не пишется.
+
+### Миграция
+- Не требуется: `complete()` работает как раньше.
+
 ## [0.5.0] — 2026-10-20
 
 ### Изменено

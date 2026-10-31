@@ -23,11 +23,39 @@ export type ChatRequest = {
   cacheKey?: string;
   headers?: Record<string, string>;
   timeoutMs?: number;
+  /** Дополнительные поля тела запроса провайдера, например `reasoning` и `usage` у OpenRouter. */
+  body?: Record<string, unknown>;
+};
+
+/** Ответ с расходом: нужен, когда вызов оплачивается и журналируется (конвейеры генерации). */
+export type ChatResult = {
+  text: string;
+  /** `length` — ответ обрезан по maxTokens, текст неполный, но оплачен. `cache` — взят из кэша. */
+  finishReason: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    reasoningTokens: number;
+    costUsd: number;
+  };
 };
 
 export type ChatClient = {
   complete(req: ChatRequest): Promise<string | null>;
+  completeDetailed(req: ChatRequest): Promise<ChatResult | null>;
 };
+
+type Payload = {
+  choices?: { message?: { content?: string }; finish_reason?: string }[];
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    cost?: number;
+    completion_tokens_details?: { reasoning_tokens?: number };
+  };
+};
+
+const NO_USAGE = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: 0 };
 
 const RETRYABLE = (status: number) => status === 429 || status >= 500;
 
@@ -71,7 +99,9 @@ export function createChat(opts: {
     }
   }
 
-  async function callOnce(req: ChatRequest): Promise<{ text: string | null; retry: boolean }> {
+  async function callOnce(
+    req: ChatRequest,
+  ): Promise<{ result: ChatResult | null; retry: boolean }> {
     let res: Response;
     try {
       res = await doFetch(url, {
@@ -82,6 +112,7 @@ export function createChat(opts: {
           ...(req.headers ?? {}),
         },
         body: JSON.stringify({
+          ...(req.body ?? {}),
           model: req.model,
           max_tokens: req.maxTokens,
           messages: [
@@ -93,34 +124,56 @@ export function createChat(opts: {
       });
     } catch (err) {
       log(`network error: ${(err as Error).message}`);
-      return { text: null, retry: true };
+      return { result: null, retry: true };
     }
     if (!res.ok) {
       log(`HTTP ${res.status}`);
-      return { text: null, retry: RETRYABLE(res.status) };
+      return { result: null, retry: RETRYABLE(res.status) };
     }
-    const payload = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    return { text: payload.choices?.[0]?.message?.content?.trim() || null, retry: false };
+    const payload = (await res.json()) as Payload;
+    const choice = payload.choices?.[0];
+    const text = choice?.message?.content?.trim();
+    if (!text) return { result: null, retry: false };
+    const u = payload.usage ?? {};
+    return {
+      result: {
+        text,
+        finishReason: choice?.finish_reason ?? "stop",
+        usage: {
+          promptTokens: u.prompt_tokens ?? 0,
+          completionTokens: u.completion_tokens ?? 0,
+          reasoningTokens: u.completion_tokens_details?.reasoning_tokens ?? 0,
+          costUsd: u.cost ?? 0,
+        },
+      },
+      retry: false,
+    };
+  }
+
+  async function run(req: ChatRequest): Promise<ChatResult | null> {
+    if (!opts.apiKey) return null;
+    const cached = await readCache(req.cacheKey);
+    if (cached) {
+      log(`cache hit ${req.cacheKey?.slice(0, 8)}`);
+      return { text: cached, finishReason: "cache", usage: NO_USAGE };
+    }
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const { result, retry } = await callOnce(req);
+      if (result) {
+        // Обрезанный ответ в кэш не кладём: следующий вызов должен получить полный.
+        if (result.finishReason !== "length") await writeCache(req.cacheKey, result.text);
+        return result;
+      }
+      if (!retry || attempt === attempts) return null;
+      await sleep(backoffMs * attempt);
+    }
+    return null;
   }
 
   return {
     async complete(req) {
-      if (!opts.apiKey) return null;
-      const cached = await readCache(req.cacheKey);
-      if (cached) {
-        log(`cache hit ${req.cacheKey?.slice(0, 8)}`);
-        return cached;
-      }
-      for (let attempt = 1; attempt <= attempts; attempt++) {
-        const { text, retry } = await callOnce(req);
-        if (text) {
-          await writeCache(req.cacheKey, text);
-          return text;
-        }
-        if (!retry || attempt === attempts) return null;
-        await sleep(backoffMs * attempt);
-      }
-      return null;
+      return (await run(req))?.text ?? null;
     },
+    completeDetailed: run,
   };
 }
