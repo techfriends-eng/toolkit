@@ -40,6 +40,8 @@ export type UpdateEntryInput = {
   title: string;
   contentHtml: string;
   excerpt?: string;
+  /** Обложка. Не задана — обложка записи остаётся как есть. */
+  featuredMedia?: number;
   meta?: Record<string, string>;
 };
 
@@ -164,6 +166,7 @@ export function createWp(opts: {
     updateEntry(id: number, input: UpdateEntryInput, creds: WpCredentials): Promise<WpEntry> {
       const payload: Record<string, unknown> = { title: input.title, content: input.contentHtml };
       if (input.excerpt) payload.excerpt = input.excerpt;
+      if (input.featuredMedia) payload.featured_media = input.featuredMedia;
       if (input.meta && Object.keys(input.meta).length > 0) payload.meta = input.meta;
       return writeEntry(`${type}/${id}`, payload, creds, "updateEntry", [200]);
     },
