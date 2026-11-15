@@ -53,6 +53,19 @@ test("createEntry: categories и meta только если заданы; оши
   );
 });
 
+test("updateEntry: обложка ставится, только если задана", async () => {
+  const entry = { id: 1, link: "L", slug: "s", status: "draft" };
+  const f = fakeFetch([
+    { status: 200, body: entry },
+    { status: 200, body: entry },
+  ]);
+  const wp = createWp({ baseUrl: "https://x", fetch: f.impl });
+  await wp.updateEntry(1, { title: "T", contentHtml: "<p>x</p>", featuredMedia: 42 }, creds);
+  await wp.updateEntry(1, { title: "T", contentHtml: "<p>x</p>" }, creds);
+  assert.equal(JSON.parse(String(f.calls[0].init.body)).featured_media, 42);
+  assert.equal("featured_media" in JSON.parse(String(f.calls[1].init.body)), false);
+});
+
 test("publishEntry: статус не сменился — ошибка, а не тихий успех", async () => {
   const f = fakeFetch([{ status: 200, body: { id: 1, link: "L", slug: "s", status: "draft" } }]);
   await assert.rejects(

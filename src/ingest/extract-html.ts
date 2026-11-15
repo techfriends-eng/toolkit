@@ -48,12 +48,13 @@ function pickMain(html: string): string {
     .replace(/<aside\b[\s\S]*?<\/aside>/gi, " ");
 }
 
-export function htmlToArticleText(html: string): string {
+/** maxChars: лимит текста. По умолчанию 24 000 знаков, это около 3500 слов русского текста. */
+export function htmlToArticleText(html: string, maxChars = 24_000): string {
   const cleaned = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
-  return sanitizePgText(stripHtml(pickMain(cleaned)), 24_000);
+  return sanitizePgText(stripHtml(pickMain(cleaned)), maxChars);
 }
 
 export async function downloadArticle(
