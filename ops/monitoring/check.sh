@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Проверка состояния хоста. Запускается таймером раз в 15 минут (host-check.timer).
-# Тревога уходит в Telegram только при СМЕНЕ состояния проверки (handbook gotchas/monitoring.md#state-change).
-#   --summary      сводка по всем проверкам независимо от состояния
+# Тревога уходит в Telegram только при СМЕНЕ состояния проверки на warn/crit (handbook gotchas/monitoring.md#state-change);
+# возврат в норму пишется в журнал (logger -t monitoring) и host_checks.
+#   --summary      сводка по всем проверкам независимо от состояния (по запросу; ежедневного таймера нет с 0.8.0)
 #   CHECK_DRY=1    только напечатать результаты (имя=уровень|значение) и выйти: без тревог и записи состояния
 #   CHECK_DRY=1 --summary   напечатать сводку вместо отправки
 #
@@ -192,8 +193,9 @@ for k in "${!SEV[@]}"; do
   cur=${SEV[$k]}
   [ "$prev" = "$cur" ] && continue
   if [ "$cur" = ok ] && [ -n "$prev" ]; then
-    changed="${changed}
-🟢 ${k}: снова в норме — ${VAL[$k]}"
+    # Тишина = норма (bds-content ADR 0001 п. 9, решение автора 2026-11-15): возврат в норму — информация
+    # для системы, а не для человека. Пишется в журнал и host_checks, в Telegram не уходит.
+    logger -t monitoring "${NAME}: ${k} снова в норме — ${VAL[$k]}"
   elif [ "$cur" != ok ]; then
     icon=$([ "$cur" = crit ] && echo 🔴 || echo 🟡)
     line="${icon} ${k}: ${VAL[$k]}"
