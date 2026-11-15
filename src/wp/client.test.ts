@@ -79,3 +79,55 @@ test("lookupPublished ходит без авторизации", async () => {
   await createWp({ baseUrl: "https://x", fetch: f.impl }).lookupPublished("s");
   assert.equal("Authorization" in (f.calls[0].init.headers as Record<string, string>), false);
 });
+
+test("ensureTags: находит метку без учёта регистра, создаёт недостающую, term_exists — тоже id", async () => {
+  const f = fakeFetch([
+    {
+      status: 200,
+      body: [
+        { id: 7, name: "Apache Kafka" },
+        { id: 8, name: "Kafka &amp; KRaft" },
+      ],
+    },
+    { status: 200, body: [] },
+    { status: 201, body: { id: 9, name: "KRaft" } },
+    { status: 200, body: [] },
+    { status: 400, body: { code: "term_exists", data: { term_id: 11 } } },
+  ]);
+  const wp = createWp({ baseUrl: "https://x", fetch: f.impl });
+  const ids = await wp.ensureTags(["apache kafka", "KRaft", " ", "kraft", "Raft"], creds);
+  assert.deepEqual(ids, [7, 9, 11]);
+  assert.match(f.calls[0].url, /\/wp-json\/wp\/v2\/tags\?search=apache%20kafka/);
+  assert.equal(f.calls[2].init.method, "POST");
+  assert.deepEqual(JSON.parse(String(f.calls[2].init.body)), { name: "KRaft" });
+});
+
+test("tags в createEntry и updateEntry только если заданы", async () => {
+  const f = fakeFetch([
+    { status: 201, body: { id: 1, link: "L", slug: "s", status: "draft" } },
+    { status: 200, body: { id: 1, link: "L", slug: "s", status: "draft" } },
+  ]);
+  const wp = createWp({ baseUrl: "https://x", fetch: f.impl });
+  await wp.createEntry(
+    { title: "T", slug: "s", contentHtml: "", status: "draft", tags: [3, 4] },
+    creds,
+  );
+  await wp.updateEntry(1, { title: "T", contentHtml: "" }, creds);
+  assert.deepEqual(JSON.parse(String(f.calls[0].init.body)).tags, [3, 4]);
+  assert.equal("tags" in JSON.parse(String(f.calls[1].init.body)), false);
+});
+
+test("restMetaKeys: ключи meta из схемы OPTIONS без авторизации", async () => {
+  const f = fakeFetch([
+    {
+      status: 200,
+      body: {
+        schema: { properties: { meta: { properties: { _yoast_wpseo_title: {}, footnotes: {} } } } },
+      },
+    },
+  ]);
+  const wp = createWp({ baseUrl: "https://x", fetch: f.impl });
+  assert.deepEqual(await wp.restMetaKeys(), ["_yoast_wpseo_title", "footnotes"]);
+  assert.equal(f.calls[0].init.method, "OPTIONS");
+  assert.equal("Authorization" in (f.calls[0].init.headers as Record<string, string>), false);
+});

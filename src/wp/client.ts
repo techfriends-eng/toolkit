@@ -30,6 +30,8 @@ export type CreateEntryInput = {
   contentHtml: string;
   excerpt?: string;
   categories?: number[];
+  /** Метки (id), см. `ensureTags`. */
+  tags?: number[];
   featuredMedia?: number;
   status: "draft" | "publish";
   /** Поля Yoast и прочие meta. Работают, только если тип записи отдаёт `meta` в REST. */
@@ -42,6 +44,8 @@ export type UpdateEntryInput = {
   excerpt?: string;
   /** Обложка. Не задана — обложка записи остаётся как есть. */
   featuredMedia?: number;
+  /** Метки (id). Заданы — заменяют метки записи целиком. */
+  tags?: number[];
   meta?: Record<string, string>;
 };
 
@@ -156,6 +160,7 @@ export function createWp(opts: {
         status: input.status,
       };
       if (input.categories) payload.categories = input.categories;
+      if (input.tags?.length) payload.tags = input.tags;
       if (input.excerpt) payload.excerpt = input.excerpt;
       if (input.featuredMedia) payload.featured_media = input.featuredMedia;
       if (input.meta && Object.keys(input.meta).length > 0) payload.meta = input.meta;
@@ -165,6 +170,7 @@ export function createWp(opts: {
     /** Частичное обновление: заголовок, тело, excerpt, meta. Slug, статус и обложку не трогает. */
     updateEntry(id: number, input: UpdateEntryInput, creds: WpCredentials): Promise<WpEntry> {
       const payload: Record<string, unknown> = { title: input.title, content: input.contentHtml };
+      if (input.tags?.length) payload.tags = input.tags;
       if (input.excerpt) payload.excerpt = input.excerpt;
       if (input.featuredMedia) payload.featured_media = input.featuredMedia;
       if (input.meta && Object.keys(input.meta).length > 0) payload.meta = input.meta;
@@ -220,6 +226,67 @@ export function createWp(opts: {
     },
 
     /** Опубликована ли запись — без кредов, публичный REST видит только `publish`. */
+    /**
+     * id меток по именам: существующая метка (имя без учёта регистра) берётся, недостающая
+     * создаётся. Порядок id совпадает с порядком имён, повторы и пустые имена отбрасываются.
+     */
+    async ensureTags(names: string[], creds: WpCredentials): Promise<number[]> {
+      const ids: number[] = [];
+      const seen = new Set<string>();
+      for (const raw of names) {
+        const name = raw.trim();
+        const key = name.toLowerCase();
+        if (!name || seen.has(key)) continue;
+        seen.add(key);
+        const q = `tags?search=${encodeURIComponent(name)}&per_page=100&_fields=id,name`;
+        const found = await wpFetch(q, creds);
+        if (found.status !== 200) throw new WpError("ensureTags", found.status, found.text);
+        const rows = parseJson(found.text, "ensureTags", found.status) as {
+          id: number;
+          name: string;
+        }[];
+        // WordPress отдаёт имя экранированным (&amp;): сравниваем после раскодирования.
+        const decode = (t: string) =>
+          t
+            .replace(/&amp;/g, "&")
+            .replace(/&#0?39;/g, "'")
+            .replace(/&quot;/g, '"');
+        const hit = rows.find((r) => decode(String(r.name)).toLowerCase() === key);
+        if (hit) {
+          ids.push(Number(hit.id));
+          continue;
+        }
+        const made = await wpFetch("tags", creds, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        const body = parseJson(made.text, "ensureTags", made.status) as {
+          id?: number;
+          code?: string;
+          data?: { term_id?: number };
+        };
+        if ((made.status === 200 || made.status === 201) && body.id) ids.push(Number(body.id));
+        else if (body.code === "term_exists" && body.data?.term_id) ids.push(body.data.term_id);
+        else throw new WpError("ensureTags", made.status, made.text);
+      }
+      return ids;
+    },
+
+    /**
+     * Ключи `meta`, которые тип записи принимает через REST (схема OPTIONS). Поля Yoast видны здесь,
+     * только если на сайте есть mu-плагин с `register_post_meta`: иначе WordPress молча
+     * выбросит их из запроса.
+     */
+    async restMetaKeys(): Promise<string[]> {
+      const { status, text } = await wpFetch(type, null, { method: "OPTIONS" });
+      if (status !== 200) throw new WpError("restMetaKeys", status, text);
+      const raw = parseJson(text, "restMetaKeys", status) as {
+        schema?: { properties?: { meta?: { properties?: Record<string, unknown> } } };
+      };
+      return Object.keys(raw.schema?.properties?.meta?.properties ?? {}).sort();
+    },
+
     async lookupPublished(slug: string): Promise<WpEntry | null> {
       const { status, text } = await wpFetch(
         `${type}?slug=${encodeURIComponent(slug)}&_fields=id,link,slug,status`,
