@@ -34,6 +34,7 @@
 
 Ставятся `alert.sh` и `alert@.service`; в `/etc/monitoring.env` достаточно `TELEGRAM_BOT_TOKEN`, `ALERT_CHAT_ID`,
 `ALERT_THREAD_ID`, `MONITOR_NAME`. Юниты проекта подключаются строкой `OnFailure=alert@%n.service`.
+Если Telegram с хоста напрямую недоступен (supan8n), `ALERT_PROXY=http://<прокси>:<порт>` — `alert.sh` пойдёт через него.
     sudo install -m 640 -g monitoring <репо проекта>/ops/checks.d/<проект>.sh /opt/monitoring/checks.d/
     cat <репо проекта>/ops/job_schedule.sql | sudo -u postgres psql -d "$MONITORING_DB"
 
