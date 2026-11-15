@@ -14,10 +14,14 @@ install -d -m 750 -g monitoring /opt/monitoring/checks.d
 install -m 750 -g monitoring "$HERE/check.sh" "$HERE/summary.sh" "$HERE/alert.sh" /opt/monitoring/
 install -m 755 "$HERE/runjob.sh" /opt/monitoring/
 install -m 644 "$HERE/README.md" "$HERE/req_mon.md" /opt/monitoring/
-install -m 644 "$HERE"/alert@.service "$HERE"/host-check.service "$HERE"/host-check.timer \
-  "$HERE"/host-summary.service "$HERE"/host-summary.timer /etc/systemd/system/
+install -m 644 "$HERE"/alert@.service "$HERE"/host-check.service "$HERE"/host-check.timer /etc/systemd/system/
+# Ежедневная сводка убрана в 0.8.0: тишина = норма, в Telegram только смена на warn/crit.
+if [ -e /etc/systemd/system/host-summary.timer ]; then
+  systemctl disable --now host-summary.timer >/dev/null 2>&1 || true
+  rm -f /etc/systemd/system/host-summary.timer /etc/systemd/system/host-summary.service
+fi
 systemctl daemon-reload
-systemctl enable --now host-check.timer host-summary.timer >/dev/null
+systemctl enable --now host-check.timer >/dev/null
 # Версия комплекта — для сверки, что на хосте стоит то, что в репо.
 cp "$HERE/../../VERSION" /opt/monitoring/VERSION 2>/dev/null || true
 echo "установлено в /opt/monitoring, версия $(cat /opt/monitoring/VERSION 2>/dev/null || echo ?)"

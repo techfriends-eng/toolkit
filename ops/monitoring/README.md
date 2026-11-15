@@ -22,7 +22,6 @@
 | `runjob.sh` | Обёртка cron-задач: запись прогона в `job_runs`, тревога при ненулевом коде. |
 | `alert@.service` | Шаблон-алертер для `OnFailure`. |
 | `host-check.service` / `.timer` | Проверки каждые 15 минут. |
-| `host-summary.service` / `.timer` | Сводка в 09:00 по Москве. |
 | `install.sh` | Установка всего перечисленного, идемпотентно. |
 
 ## Установка
@@ -75,7 +74,7 @@
 ## Проверка
 
     sudo /opt/monitoring/check.sh            # разовый прогон, печатает итог
-    sudo systemctl start host-summary        # прислать сводку сейчас
+    sudo /opt/monitoring/check.sh --summary  # прислать сводку сейчас (ежедневной нет с 0.8.0)
     sudo CHECK_DRY=1 /opt/monitoring/check.sh --summary   # напечатать сводку, не отправляя
     sudo cat /var/lib/monitoring/state       # текущее состояние всех проверок
     sudo -u postgres psql -d "${MONITORING_DB:-stackradar}" -c "select * from job_runs order by id desc limit 10"
