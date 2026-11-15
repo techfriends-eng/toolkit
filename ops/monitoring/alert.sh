@@ -44,7 +44,9 @@ fi
 THREAD="${ALERT_THREAD_ID:-${BDS_TOPIC_LOGS:-}}"
 case "$ALERT_CHAT_ID" in -*) ;; *) THREAD="" ;; esac
 
-curl -sS -m 20 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+# ALERT_PROXY — для хоста, откуда Telegram недоступен напрямую (supan8n в Yandex Cloud ходит через
+# прокси gate01 по Tailscale, как n8n на том же хосте).
+curl -sS -m 20 ${ALERT_PROXY:+--proxy "$ALERT_PROXY"} -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   --data-urlencode "chat_id=${ALERT_CHAT_ID}" \
   ${THREAD:+--data-urlencode "message_thread_id=${THREAD}"} \
   --data-urlencode "text=${TEXT}" \
