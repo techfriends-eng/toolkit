@@ -30,6 +30,7 @@ npm install "github:techfriends-eng/toolkit#v0.6.0"
 | `@techfriends-eng/toolkit/async` | `singleFlight`: не больше одного вызова за раз (поллеры) | stack-radar `src/lib/single-flight.ts` | [telegram](https://github.com/techfriends-eng/handbook/blob/main/gotchas/telegram.md#one-poller) |
 | `ops/monitoring/` | общий `check.sh` + подключаемые проверки проектов (`checks.d/`), `runjob.sh`, `alert.sh`, юниты таймеров, `install.sh`; хост ставит с тега: `git clone` в `/opt/toolkit`, `sudo ops/monitoring/install.sh` | stack-radar `ops/monitoring/` | [monitoring](https://github.com/techfriends-eng/handbook/blob/main/gotchas/monitoring.md) |
 | `ops/lib/tg.sh` | Telegram для bash: `tg_send_text/photo/document`, `tg_get_updates`, `tg_delete_messages`; ошибки — код 1 и описание в stderr; тесты `ops/lib/tg.test.sh` | wiki_visualizer `scripts/lib/telegram.sh` | [telegram](https://github.com/techfriends-eng/handbook/blob/main/gotchas/telegram.md) |
+| `ops/pin_lag.sh` | отставание пина toolkit в `package.json` потребителя от последнего тега; выход 1, если тегов новее пина больше допуска (по умолчанию 2); вызов из selfcheck и CI потребителя: `bash node_modules/@techfriends-eng/toolkit/ops/pin_lag.sh`; тесты `ops/pin_lag.test.sh` | правило bds-content ADR 0001, п. 7 | — |
 
 Пример:
 
