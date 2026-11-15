@@ -27,6 +27,13 @@
 ## Установка
 
     sudo ops/monitoring/install.sh
+
+Хост без Postgres на самом хосте (supan8n: Postgres внутри Docker Supabase) получает только первый слой:
+
+    sudo ops/monitoring/install.sh --alert-only
+
+Ставятся `alert.sh` и `alert@.service`; в `/etc/monitoring.env` достаточно `TELEGRAM_BOT_TOKEN`, `ALERT_CHAT_ID`,
+`ALERT_THREAD_ID`, `MONITOR_NAME`. Юниты проекта подключаются строкой `OnFailure=alert@%n.service`.
     sudo install -m 640 -g monitoring <репо проекта>/ops/checks.d/<проект>.sh /opt/monitoring/checks.d/
     cat <репо проекта>/ops/job_schedule.sql | sudo -u postgres psql -d "$MONITORING_DB"
 
