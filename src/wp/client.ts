@@ -187,19 +187,71 @@ export function createWp(opts: {
       return toEntry(parseJson(text, "getEntryStatus", status) as Record<string, unknown>);
     },
 
-    /** draft → publish; если статус не сменился — ошибка, а не тихий успех. */
-    async publishEntry(id: number, creds: WpCredentials): Promise<WpEntry> {
-      const entry = await writeEntry(
-        `${type}/${id}`,
-        { status: "publish" },
-        creds,
-        "publishEntry",
-        [200],
-      );
-      if (entry.status !== "publish") {
+    /**
+     * draft → publish; если статус не сменился — ошибка, а не тихий успех. С `dateGmt` в будущем
+     * WordPress ставит запись в расписание (`future`), в прошлом — публикует задним числом.
+     */
+    async publishEntry(
+      id: number,
+      creds: WpCredentials,
+      opts: { dateGmt?: string } = {},
+    ): Promise<WpEntry> {
+      const payload: Record<string, unknown> = { status: "publish" };
+      if (opts.dateGmt) payload.date_gmt = opts.dateGmt;
+      const entry = await writeEntry(`${type}/${id}`, payload, creds, "publishEntry", [200]);
+      const ok = opts.dateGmt ? ["publish", "future"] : ["publish"];
+      if (!ok.includes(entry.status)) {
         throw new WpError("publishEntry: статус не сменился", 200, JSON.stringify(entry));
       }
       return entry;
+    },
+
+    /**
+     * `date_gmt` записей в статусах publish и future начиная с `afterIso` — для раскладки дат
+     * публикации. Постранично по 100, пока страница полная.
+     */
+    async entryDates(afterIso: string, creds: WpCredentials): Promise<string[]> {
+      const dates: string[] = [];
+      for (let page = 1; ; page++) {
+        const q =
+          `${type}?status=publish,future&context=edit&per_page=100&page=${page}` +
+          `&after=${encodeURIComponent(afterIso)}&_fields=date_gmt`;
+        const { status, text } = await wpFetch(q, creds);
+        const rows = parseJson(text, "entryDates", status);
+        if (status !== 200 || !Array.isArray(rows)) throw new WpError("entryDates", status, text);
+        for (const r of rows as { date_gmt?: string }[]) if (r.date_gmt) dates.push(r.date_gmt);
+        if (rows.length < 100) return dates;
+      }
+    },
+
+    /**
+     * Рубрики по тексту (заголовок, ключевые слова): корневая `rootId` всегда первой, за ней до `max`
+     * рубрик, чья ссылка подходит под `linkPattern`, а название встречается в тексте отдельным
+     * словом (без учёта регистра и знаков). Публичный запрос; при ошибке сети — только корневая.
+     */
+    async matchCategories(
+      text: string,
+      opts: { rootId: number; linkPattern: RegExp; max?: number },
+    ): Promise<number[]> {
+      const norm = (t: string) => ` ${t.toLowerCase().replace(/[^a-z0-9а-яё]+/g, " ")} `;
+      let rows: { id: number; name: string; link?: string }[] = [];
+      try {
+        const res = await wpFetch("categories?per_page=100&_fields=id,name,link", null);
+        const parsed = JSON.parse(res.text) as unknown;
+        if (res.status === 200 && Array.isArray(parsed)) rows = parsed as typeof rows;
+      } catch {
+        return [opts.rootId];
+      }
+      const t = norm(text);
+      const hits = rows
+        .filter((c) => c.id !== opts.rootId && opts.linkPattern.test(c.link ?? ""))
+        .filter((c) => {
+          const n = norm(String(c.name)).trim();
+          return n !== "" && t.includes(` ${n} `);
+        })
+        .map((c) => Number(c.id))
+        .slice(0, opts.max ?? 4);
+      return [opts.rootId, ...hits];
     },
 
     /**

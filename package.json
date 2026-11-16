@@ -1,6 +1,6 @@
 {
   "name": "@techfriends-eng/toolkit",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Переиспользуемые модули techfriends-eng: Telegram, ingest, LLM, БД, конфиг",
   "private": true,
   "type": "module",
@@ -40,6 +40,9 @@
       "types": "./dist/filter/index.d.ts",
       "default": "./dist/filter/index.js"
     }
+  },
+  "bin": {
+    "toolkit-wp": "./dist/cli/wp.js"
   },
   "files": [
     "dist",
