@@ -132,6 +132,7 @@ test("completeDetailed: тело запроса дополняется, расх
   });
   assert.deepEqual(res, {
     text: "текст",
+    model: "m",
     finishReason: "length",
     usage: { promptTokens: 10, completionTokens: 40, reasoningTokens: 30, costUsd: 0.0123 },
   });
@@ -155,4 +156,28 @@ test("completeDetailed: попадание в кэш без сети и без �
   assert.equal(res?.finishReason, "cache");
   assert.equal(res?.usage.costUsd, 0);
   assert.equal(f.calls.length, 0);
+});
+
+test("completeDetailed: стоимость xAI в тиках и нано-долларах, модель из ответа", async () => {
+  const reply = (usage: object) =>
+    (async () =>
+      new Response(
+        JSON.stringify({ model: "grok-4.3-0115", choices: [{ message: { content: "x" } }], usage }),
+      )) as unknown as typeof fetch;
+  const run = (usage: object) =>
+    createChat({
+      baseUrl: "https://x",
+      apiKey: "k",
+      fetch: reply(usage),
+      ...quiet,
+    }).completeDetailed(req);
+  const ticks = await run({
+    prompt_tokens: 900,
+    completion_tokens: 300,
+    cost_in_usd_ticks: 18_750_000,
+  });
+  assert.equal(ticks?.usage.costUsd, 0.001875);
+  assert.equal(ticks?.model, "grok-4.3-0115");
+  assert.equal((await run({ cost_in_nano_usd: 2_500_000 }))?.usage.costUsd, 0.0025);
+  assert.equal((await run({ prompt_tokens: 1 }))?.usage.costUsd, 0);
 });
