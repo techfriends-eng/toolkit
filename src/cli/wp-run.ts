@@ -21,6 +21,8 @@ const USAGE = `toolkit-wp <команда> [опции]
   publish      --type T --id N [--date-gmt ISO]     → link
   dates        --type T --after ISO                 → date_gmt по строке
   upload-media --file F --filename N --alt A [--content-type image/jpeg] → id, source_url
+  raw-content  --type T --id N                      → content.raw как есть
+  count        --type T --status S                  → число записей
   meta-keys    --type T                             → JSON-массив ключей meta
   categories   --text X --root N --link-pattern RE [--max 4] → JSON-массив id
 Общие: --base-url URL (или WP_BASE_URL), --user-file F --pass-file F.`;
@@ -32,6 +34,7 @@ const OPTIONS = {
   type: { type: "string" },
   slug: { type: "string" },
   id: { type: "string" },
+  status: { type: "string" },
   title: { type: "string" },
   "content-file": { type: "string" },
   "featured-media": { type: "string" },
@@ -163,6 +166,14 @@ export async function runWpCli(io: WpCliIo): Promise<number> {
           await creds(),
         );
         lines(m.id, m.sourceUrl);
+        return 0;
+      }
+      case "raw-content": {
+        io.out(await wp.rawContent(int("id"), await creds()));
+        return 0;
+      }
+      case "count": {
+        lines(await wp.countEntries(need("status"), await creds()));
         return 0;
       }
       case "meta-keys": {

@@ -155,3 +155,28 @@ test("dates: по строке; неизвестная команда и нех�
   assert.equal(await runWpCli(harness(["nope"], []).io), 2);
   assert.equal(await runWpCli(harness(["find", ...credArgs], [], credFiles).io), 2);
 });
+
+test("raw-content: content.raw без добавок; count: из X-WP-Total через HEAD", async () => {
+  const r = harness(
+    ["raw-content", "--type", "encyclopedia", "--id", "3", ...credArgs],
+    [{ status: 200, body: { content: { raw: "<p>a</p>\n" } } }],
+    credFiles,
+  );
+  assert.equal(await runWpCli(r.io), 0);
+  assert.equal(r.out.join(""), "<p>a</p>\n");
+  assert.match(r.calls[0].url, /encyclopedia\/3\?context=edit&_fields=content$/);
+
+  const c = harness(
+    ["count", "--type", "encyclopedia", "--status", "draft", ...credArgs],
+    [],
+    credFiles,
+  );
+  c.io.fetch = (async (url: string, init: RequestInit) => {
+    c.calls.push({ url, init });
+    return new Response(null, { status: 200, headers: { "X-WP-Total": "17" } });
+  }) as unknown as typeof fetch;
+  assert.equal(await runWpCli(c.io), 0);
+  assert.equal(c.out.join(""), "17\n");
+  assert.equal(c.calls[0].init.method, "HEAD");
+  assert.match(c.calls[0].url, /encyclopedia\?status=draft&per_page=1$/);
+});

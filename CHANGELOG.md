@@ -9,12 +9,14 @@
 ### Добавлено
 - CLI `toolkit-wp` (`bin`, `src/cli/wp.ts`) над модулем `wp` для bash-проектов (handbook ADR 0002; bds-content
   ADR 0001, п. 4b): `find`, `status`, `create` (всегда draft, `--only-accepted-meta` сверяет meta со схемой
-  REST), `publish [--date-gmt]`, `dates`, `upload-media`, `meta-keys`, `categories`. Вывод построчный, как у
+  REST), `publish [--date-gmt]`, `dates`, `upload-media`, `meta-keys`, `categories`, `raw-content`, `count`.
+  Вывод построчный, как у
   `wordpress.sh` wiki_visualizer. Креды — только файлами, тело — файлом или stdin. Коды выхода: 1 — ошибка WP
   или «не найдено», 2 — аргументы.
 - `wp`: `publishEntry(id, creds, { dateGmt })` — публикация с датой, `future` принимается; `entryDates(after,
   creds)` — даты publish и future постранично; `matchCategories(text, { rootId, linkPattern, max })` — рубрики
-  по словам текста. Название рубрики сравнивается без учёта регистра и для кириллицы (в jq-версии
+  по словам текста; `rawContent(id, creds)` — `content.raw`; `countEntries(status, creds)` — число из
+  `X-WP-Total`. Название рубрики сравнивается без учёта регистра и для кириллицы (в jq-версии
   `ascii_downcase` кириллицу не понижал).
 
 ## [0.10.0] — 2026-11-16

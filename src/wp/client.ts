@@ -206,6 +206,33 @@ export function createWp(opts: {
       return entry;
     },
 
+    /** Исходный HTML записи (`content.raw`, нужен `context=edit`) — для отпечатка «автор правил». */
+    async rawContent(id: number, creds: WpCredentials): Promise<string> {
+      const { status, text } = await wpFetch(`${type}/${id}?context=edit&_fields=content`, creds);
+      if (status !== 200) throw new WpError("rawContent", status, text);
+      const raw = (parseJson(text, "rawContent", status) as { content?: { raw?: unknown } }).content
+        ?.raw;
+      if (typeof raw !== "string") throw new WpError("rawContent: нет content.raw", status, text);
+      return raw;
+    },
+
+    /** Сколько записей в статусе — из заголовка `X-WP-Total`, тело не качаем (`per_page=1`, HEAD). */
+    async countEntries(status: string, creds: WpCredentials): Promise<number> {
+      const res = await doFetch(
+        `${base}/wp-json/wp/v2/${type}?status=${encodeURIComponent(status)}&per_page=1`,
+        {
+          method: "HEAD",
+          headers: { Accept: "application/json", Authorization: authHeader(creds) },
+          signal: AbortSignal.timeout(timeoutMs),
+        },
+      );
+      const total = Number(res.headers.get("x-wp-total"));
+      if (res.status !== 200 || !Number.isInteger(total)) {
+        throw new WpError("countEntries", res.status, "");
+      }
+      return total;
+    },
+
     /**
      * `date_gmt` записей в статусах publish и future начиная с `afterIso` — для раскладки дат
      * публикации. Постранично по 100, пока страница полная.
