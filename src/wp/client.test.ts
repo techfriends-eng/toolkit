@@ -131,3 +131,78 @@ test("restMetaKeys: ключи meta из схемы OPTIONS без автори�
   assert.equal(f.calls[0].init.method, "OPTIONS");
   assert.equal("Authorization" in (f.calls[0].init.headers as Record<string, string>), false);
 });
+
+test("publishEntry с dateGmt: шлёт date_gmt и принимает future", async () => {
+  const f = fakeFetch([{ status: 200, body: { id: 5, link: "L", slug: "s", status: "future" } }]);
+  const wp = createWp({ baseUrl: "https://x", postType: "encyclopedia", fetch: f.impl });
+  const e = await wp.publishEntry(5, creds, { dateGmt: "2030-01-01T09:00:00" });
+  assert.equal(e.status, "future");
+  assert.deepEqual(JSON.parse(String(f.calls[0].init.body)), {
+    status: "publish",
+    date_gmt: "2030-01-01T09:00:00",
+  });
+});
+
+test("publishEntry без даты: future — ошибка, а не тихий успех", async () => {
+  const f = fakeFetch([{ status: 200, body: { id: 5, link: "L", slug: "s", status: "future" } }]);
+  const wp = createWp({ baseUrl: "https://x", fetch: f.impl });
+  await assert.rejects(wp.publishEntry(5, creds), WpError);
+});
+
+test("entryDates: постранично, пока страница полная", async () => {
+  const full = Array.from({ length: 100 }, (_, i) => ({ date_gmt: `d${i}` }));
+  const f = fakeFetch([
+    { status: 200, body: full },
+    { status: 200, body: [{ date_gmt: "last" }] },
+  ]);
+  const wp = createWp({ baseUrl: "https://x", postType: "encyclopedia", fetch: f.impl });
+  const ds = await wp.entryDates("2026-11-01T00:00:00", creds);
+  assert.equal(ds.length, 101);
+  assert.equal(ds[100], "last");
+  assert.match(
+    f.calls[0].url,
+    /encyclopedia\?status=publish,future&context=edit&per_page=100&page=1&after=2026-11-01T00%3A00%3A00/,
+  );
+  assert.match(f.calls[1].url, /page=2/);
+});
+
+test("entryDates: ответ не массив — WpError", async () => {
+  const f = fakeFetch([{ status: 400, body: { code: "rest_invalid_param" } }]);
+  await assert.rejects(
+    createWp({ baseUrl: "https://x", fetch: f.impl }).entryDates("a", creds),
+    WpError,
+  );
+});
+
+test("matchCategories: корневая первой, подрубрики по слову в тексте и шаблону ссылки", async () => {
+  const f = fakeFetch([
+    {
+      status: 200,
+      body: [
+        { id: 1, name: "Статьи", link: "https://x/blog/news/" },
+        { id: 10, name: "Kafka", link: "https://x/blog/news/kafka/" },
+        { id: 11, name: "Spark", link: "https://x/blog/news/spark/" },
+        { id: 12, name: "Kafka", link: "https://x/other/kafka/" },
+        { id: 13, name: "Flink", link: "https://x/blog/news/flink/" },
+      ],
+    },
+  ]);
+  const wp = createWp({ baseUrl: "https://x", fetch: f.impl });
+  const ids = await wp.matchCategories("Kafka Streams и Apache-Spark, sparkle", {
+    rootId: 1,
+    linkPattern: /\/blog\/news\/.+/,
+  });
+  assert.deepEqual(ids, [1, 10, 11]);
+  assert.equal("Authorization" in (f.calls[0].init.headers as Record<string, string>), false);
+});
+
+test("matchCategories: сбой сети — только корневая", async () => {
+  const impl = (async () => {
+    throw new Error("down");
+  }) as unknown as typeof fetch;
+  const ids = await createWp({ baseUrl: "https://x", fetch: impl }).matchCategories("Kafka", {
+    rootId: 1,
+    linkPattern: /./,
+  });
+  assert.deepEqual(ids, [1]);
+});
