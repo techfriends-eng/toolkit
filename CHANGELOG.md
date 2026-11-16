@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-11-16
+
+### Добавлено
+- `llm`: `ChatResult.model` — модель из ответа провайдера (у OpenRouter с fallback бывает не та, что запрошена);
+  при попадании в кэш — запрошенная. Нужна журналу расхода (bds-content ADR 0001, шаг 5c).
+- `llm`: `usageCostUsd(usage)` — стоимость запроса в $: `usage.cost` (OpenRouter), `cost_in_usd_ticks`
+  (xAI, 1e10 тиков в долларе) или `cost_in_nano_usd`. Раньше у xAI `costUsd` всегда был 0.
+
 ## [0.13.0] — 2026-11-16
 
 ### Добавлено

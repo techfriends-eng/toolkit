@@ -30,6 +30,8 @@ export type ChatRequest = {
 /** Ответ с расходом: нужен, когда вызов оплачивается и журналируется (конвейеры генерации). */
 export type ChatResult = {
   text: string;
+  /** Модель из ответа провайдера (у OpenRouter с fallback может отличаться от запрошенной). */
+  model: string;
   /** `length` — ответ обрезан по maxTokens, текст неполный, но оплачен. `cache` — взят из кэша. */
   finishReason: string;
   usage: {
@@ -46,16 +48,30 @@ export type ChatClient = {
 };
 
 type Payload = {
+  model?: string;
   choices?: { message?: { content?: string }; finish_reason?: string }[];
   usage?: {
     prompt_tokens?: number;
     completion_tokens?: number;
     cost?: number;
+    cost_in_usd_ticks?: number;
+    cost_in_nano_usd?: number;
     completion_tokens_details?: { reasoning_tokens?: number };
   };
 };
 
 const NO_USAGE = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: 0 };
+
+/**
+ * Стоимость запроса в $: OpenRouter — `usage.cost`, xAI — `cost_in_usd_ticks` (1e10 тиков в долларе) или
+ * `cost_in_nano_usd`. Нет ни одного поля — 0: токены в журнале останутся, $ досчитается по прайсу.
+ */
+export function usageCostUsd(u: NonNullable<Payload["usage"]>): number {
+  if (typeof u.cost === "number") return u.cost;
+  if (typeof u.cost_in_usd_ticks === "number") return u.cost_in_usd_ticks / 1e10;
+  if (typeof u.cost_in_nano_usd === "number") return u.cost_in_nano_usd / 1e9;
+  return 0;
+}
 
 const RETRYABLE = (status: number) => status === 429 || status >= 500;
 
@@ -138,12 +154,13 @@ export function createChat(opts: {
     return {
       result: {
         text,
+        model: payload.model || req.model,
         finishReason: choice?.finish_reason ?? "stop",
         usage: {
           promptTokens: u.prompt_tokens ?? 0,
           completionTokens: u.completion_tokens ?? 0,
           reasoningTokens: u.completion_tokens_details?.reasoning_tokens ?? 0,
-          costUsd: u.cost ?? 0,
+          costUsd: usageCostUsd(u),
         },
       },
       retry: false,
@@ -155,7 +172,7 @@ export function createChat(opts: {
     const cached = await readCache(req.cacheKey);
     if (cached) {
       log(`cache hit ${req.cacheKey?.slice(0, 8)}`);
-      return { text: cached, finishReason: "cache", usage: NO_USAGE };
+      return { text: cached, model: req.model, finishReason: "cache", usage: NO_USAGE };
     }
     for (let attempt = 1; attempt <= attempts; attempt++) {
       const { result, retry } = await callOnce(req);
