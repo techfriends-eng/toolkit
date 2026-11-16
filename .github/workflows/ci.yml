@@ -20,7 +20,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - name: bash tests
-        run: bash ops/lib/tg.test.sh && bash ops/pin_lag.test.sh
+        run: bash ops/lib/tg.test.sh && bash ops/pin_lag.test.sh && bash ops/lib/llm_ledger.test.sh
       - name: shellcheck
         run: |
           files=$(git ls-files '*.sh' '.githooks/*')
