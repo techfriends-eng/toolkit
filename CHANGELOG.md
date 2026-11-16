@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-11-16
+
+### Добавлено
+- Модуль `@techfriends-eng/toolkit/visuals` (bds-content ADR 0001, п. 4c), перенесён из bds-satellites
+  `src/lib/visuals` вместе с тестами: `renderScheme` (Mermaid → JPG или PNG по расширению, R5 — перерисовка LR
+  для вертикальной схемы), `finalizePreview`, `forceLR`, `generatePreview` (OpenRouter, fallback моделей,
+  расход), `parseVisuals` (превью и схемы из `_meta.md`). Команды выполняет `Runner`: `dockerRunner` (контейнер
+  с uid хоста, спутники) или `localRunner` (образ wiki_visualizer). Палитра сайта остаётся в проекте: приходит
+  готовыми `decorate` и `config`. Новые опции: `width` (`-w` mmdc 11.x), `scale`, `size`, `stripMeta`.
+- CLI `toolkit-visuals render` для bash (wiki_visualizer): предупреждение R5 в stderr, если схема осталась
+  выше, чем шире.
+
 ## [0.11.0] — 2026-11-16
 
 ### Добавлено
