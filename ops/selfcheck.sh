@@ -34,6 +34,7 @@ check "build (dist)" npm run build
 check "shellcheck ops/" shellcheck_all
 check "ops/lib/tg.test.sh" bash ops/lib/tg.test.sh
 check "ops/pin_lag.test.sh" bash ops/pin_lag.test.sh
+check "ops/lib/llm_ledger.test.sh" bash ops/lib/llm_ledger.test.sh
 check "ops/monitoring/summary.test.sh" bash ops/monitoring/summary.test.sh
 check "VERSION = package.json" versions_agree
 

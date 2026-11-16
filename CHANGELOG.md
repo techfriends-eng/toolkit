@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-11-16
+
+### Добавлено
+- Журнал расхода LLM (bds-content ADR 0001, п. 5, шаг 5b; таблица `llm.calls` — bds-content `sql/llm_ledger.sql`):
+  - `llm`: `createLedger({ project, query, warn })` — `record({ stage, model, provider, site, ref, usage, cached, ok,
+    modelsVersion })`. Запрос к БД передаётся параметром (`pool.query`), драйвер не нужен. Без `query` журнал
+    выключен; сбой базы — предупреждение, не исключение. Ответ из кэша пишется с cost 0.
+  - `ops/lib/llm_ledger.sh` для bash: `llm_ledger_log <stage> <model> [key=value ...]` и
+    `llm_ledger_from_openrouter <stage> <ответ.json>` (модель, токены и cost из ответа OpenRouter). DSN —
+    `LLM_LEDGER_DB_URL` или `LLM_LEDGER_DB_URL_FILE`; значения уходят в psql переменными, не склейкой SQL.
+    Всегда код 0. Тесты без базы — `ops/lib/llm_ledger.test.sh`, в selfcheck и CI.
+
 ## [0.12.0] — 2026-11-16
 
 ### Добавлено
