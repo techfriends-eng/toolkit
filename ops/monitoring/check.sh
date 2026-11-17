@@ -218,6 +218,12 @@ create table if not exists host_checks (
   disk_pct int, mem_avail_mb int, ingest_age_h int, cert_days_left int,
   console_code text, journal_errors int
 );
+-- Читать историю должен владелец базы: недельный отчёт stack-radar ходит ролью stackradar,
+-- а таблицу создаёт postgres. Выдача повторяется на каждом запуске и ничего не стоит.
+do \$\$ begin
+  execute format('grant select on host_checks to %I',
+    (select pg_get_userbyid(datdba) from pg_database where datname = current_database()));
+end \$\$;
 insert into host_checks (worst, disk_pct, mem_avail_mb, ingest_age_h, cert_days_left, console_code, journal_errors)
 values ('$worst', $disk, $mem, ${ingest_age_h:-null}, ${left:-null}, '${code}', $errs);
 SQL

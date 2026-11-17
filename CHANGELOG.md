@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-11-17
+
+### Исправлено
+- `ops/monitoring/check.sh`: владелец базы `$MONITORING_DB` получает `select` на `host_checks`. Таблицу создаёт
+  `postgres`, и недельный отчёт stack-radar (роль `stackradar`) падал в разделе «Хост»: `permission denied for
+  table host_checks` (17.11). Выдача идёт на каждом запуске, отдельной миграции нет.
+
 ## [0.14.0] — 2026-11-16
 
 ### Добавлено
