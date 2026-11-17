@@ -201,7 +201,7 @@ og-инъекция): вне среды Grok они падают, а `&&` обр
 | Скрипты на хосте | `/opt/monitoring/` |
 | Настройки и секреты тревог | `/etc/monitoring.env` (640, `root:monitoring`) |
 | Состояние проверок | `/var/lib/monitoring/state` |
-| История проверок хоста | таблица `host_checks` в базе `$MONITORING_DB` |
+| История проверок хоста | таблица `host_checks` в базе `$MONITORING_DB`, чтение — владельцу базы |
 | История прогонов задач | таблица `job_runs`, ожидаемый ритм — `job_schedule` |
 | Ротация логов | `/etc/logrotate.d/bds-projects` |
 | Служебный чат и темы | `/etc/bds-telegram.env` (эталон — `bds-telegram.env` рядом) |
