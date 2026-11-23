@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-11-23
+
+### Добавлено
+- `llm`: `ChatRequest.user` принимает части сообщения `ChatContentPart[]` (`text`, `image_url`, `video_url`)
+  в формате OpenAI/OpenRouter. Нужно bds-satellites: Gemini через OpenRouter читает видео YouTube по ссылке,
+  когда сам YouTube отвечает серверам в AWS «Sign in to confirm you're not a bot». Строка работает как раньше.
+
 ## [0.14.1] — 2026-11-17
 
 ### Исправлено

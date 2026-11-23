@@ -14,10 +14,20 @@ export type ChatCache = {
   set(key: string, value: string): Promise<void>;
 };
 
+/**
+ * Часть сообщения пользователя в формате OpenAI/OpenRouter. `video_url` со ссылкой на YouTube
+ * OpenRouter передаёт Gemini (Google AI Studio): видео читает Google, а не вызывающий.
+ */
+export type ChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "video_url"; video_url: { url: string } };
+
 export type ChatRequest = {
   model: string;
   system: string;
-  user: string;
+  /** Текст или части сообщения (текст, картинка, видео). */
+  user: string | ChatContentPart[];
   maxTokens: number;
   /** Ключ кэша; без него кэш не используется. */
   cacheKey?: string;
