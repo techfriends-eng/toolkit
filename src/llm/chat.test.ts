@@ -181,3 +181,18 @@ test("completeDetailed: стоимость xAI в тиках и нано-дол�
   assert.equal((await run({ cost_in_nano_usd: 2_500_000 }))?.usage.costUsd, 0.0025);
   assert.equal((await run({ prompt_tokens: 1 }))?.usage.costUsd, 0);
 });
+
+test("части сообщения: видео уходит в content пользователя как есть", async () => {
+  const { impl, calls } = fakeFetch(["пересказ"]);
+  const chat = createChat({ baseUrl: "https://x", apiKey: "k", fetch: impl, ...quiet });
+  const user = [
+    { type: "text" as const, text: "перескажи" },
+    { type: "video_url" as const, video_url: { url: "https://www.youtube.com/watch?v=abc" } },
+  ];
+  assert.equal(await chat.complete({ ...req, user }), "пересказ");
+  const sent = JSON.parse(String(calls[0].body));
+  assert.deepEqual(sent.messages, [
+    { role: "system", content: "s" },
+    { role: "user", content: user },
+  ]);
+});
