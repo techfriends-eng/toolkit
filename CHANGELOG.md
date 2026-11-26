@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-11-26
+
+### Добавлено
+- `llm`: `createChat({ throwOn })` — коды, на которых вызов бросает `ChatHttpError` (`status`, `body` — текст
+  провайдера до 500 символов) вместо `null`, без повторов. Для `[401, 402, 403]`: 24–26.11 у OpenRouter кончился
+  баланс, а bds-satellites видел только «модель не ответила после повторов» — код 402 терялся. Без `throwOn`
+  поведение прежнее.
+- `llm`: в логе отказа теперь код и текст провайдера (`HTTP 402: This request requires more credits…`), а не
+  только код. `providerMessage(body)` — `error.message` из JSON OpenRouter/OpenAI, иначе тело как есть.
+- `ops/monitoring/openrouter.sh`: сторож `openrouter_credits` — остаток баланса OpenRouter по `GET /api/v1/credits`,
+  warn меньше $5, crit меньше $1 (`OPENROUTER_WARN_USD`, `OPENROUTER_CRIT_USD`). Включается `OPENROUTER_KEY_FILE`
+  в `/etc/monitoring.env`; ключ уходит в curl через stdin. 401/403 — warn: по документации нужен management-ключ.
+  Тесты без сети — `ops/monitoring/openrouter.test.sh`, в selfcheck и CI.
+
 ## [0.15.0] — 2026-11-23
 
 ### Добавлено

@@ -25,7 +25,7 @@ if [ "${1:-}" = "--alert-only" ]; then
   exit 0
 fi
 install -d -m 750 -g monitoring /opt/monitoring/checks.d
-install -m 750 -g monitoring "$HERE/check.sh" "$HERE/summary.sh" "$HERE/alert.sh" /opt/monitoring/
+install -m 750 -g monitoring "$HERE/check.sh" "$HERE/summary.sh" "$HERE/openrouter.sh" "$HERE/alert.sh" /opt/monitoring/
 install -m 755 "$HERE/runjob.sh" /opt/monitoring/
 install -m 644 "$HERE/README.md" "$HERE/req_mon.md" /opt/monitoring/
 install -m 644 "$HERE"/alert@.service "$HERE"/host-check.service "$HERE"/host-check.timer /etc/systemd/system/
