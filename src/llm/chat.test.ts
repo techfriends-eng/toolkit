@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createChat, type ChatCache } from "./chat.ts";
+import { ChatHttpError, createChat, providerMessage, type ChatCache } from "./chat.ts";
 
 const req = { model: "m", system: "s", user: "u", maxTokens: 10 };
 
@@ -195,4 +195,82 @@ test("части сообщения: видео уходит в content поль
     { role: "system", content: "s" },
     { role: "user", content: user },
   ]);
+});
+
+const OR_402 = JSON.stringify({
+  error: { message: "This request requires more credits, or fewer max_tokens.", code: 402 },
+});
+
+function statusFetch(status: number, body: string) {
+  let calls = 0;
+  const impl = (async () => {
+    calls++;
+    return new Response(body, { status });
+  }) as unknown as typeof fetch;
+  return { impl, calls: () => calls };
+}
+
+test("402 без throwOn — прежний null, в логе код и текст провайдера", async () => {
+  const f = statusFetch(402, OR_402);
+  const lines: string[] = [];
+  const chat = createChat({
+    baseUrl: "https://x",
+    apiKey: "k",
+    fetch: f.impl,
+    sleep: async () => {},
+    log: (l) => lines.push(l),
+  });
+  assert.equal(await chat.complete(req), null);
+  assert.equal(f.calls(), 1);
+  assert.deepEqual(lines, ["HTTP 402: This request requires more credits, or fewer max_tokens."]);
+});
+
+test("throwOn: 402 — ChatHttpError с кодом и текстом, без повторов", async () => {
+  const f = statusFetch(402, OR_402);
+  const chat = createChat({
+    baseUrl: "https://x",
+    apiKey: "k",
+    fetch: f.impl,
+    throwOn: [401, 402, 403],
+    ...quiet,
+  });
+  await assert.rejects(chat.completeDetailed(req), (err: unknown) => {
+    assert.ok(err instanceof ChatHttpError);
+    assert.equal(err.status, 402);
+    assert.equal(err.body, "This request requires more credits, or fewer max_tokens.");
+    assert.match(err.message, /^HTTP 402: This request requires more credits/);
+    return true;
+  });
+  assert.equal(f.calls(), 1);
+});
+
+test("throwOn не задевает другие коды: 400 — null, 503 — повторы", async () => {
+  const opts = { baseUrl: "https://x", apiKey: "k", throwOn: [402], ...quiet };
+  const bad = statusFetch(400, "{}");
+  assert.equal(await createChat({ ...opts, fetch: bad.impl }).complete(req), null);
+  const down = statusFetch(503, "upstream");
+  assert.equal(await createChat({ ...opts, fetch: down.impl }).complete(req), null);
+  assert.equal(down.calls(), 3);
+});
+
+test("тело ответа обрезается до 500 символов, не-JSON идёт как есть", async () => {
+  const f = statusFetch(403, `  ${"x".repeat(900)}  `);
+  const chat = createChat({
+    baseUrl: "https://x",
+    apiKey: "k",
+    fetch: f.impl,
+    throwOn: [403],
+    ...quiet,
+  });
+  await assert.rejects(chat.complete(req), (err: unknown) => {
+    assert.ok(err instanceof ChatHttpError);
+    assert.equal(err.body.length, 500);
+    return true;
+  });
+});
+
+test("providerMessage: error.message из JSON, иначе текст", () => {
+  assert.equal(providerMessage(OR_402), "This request requires more credits, or fewer max_tokens.");
+  assert.equal(providerMessage("Bad Gateway\n"), "Bad Gateway");
+  assert.equal(providerMessage('{"error":{}}'), '{"error":{}}');
 });

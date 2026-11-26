@@ -17,6 +17,7 @@
 |---|---|
 | `alert.sh` | Отправка тревоги в Telegram. Общая для всех слоёв. |
 | `check.sh` | Общие проверки: юниты (`MONITOR_UNITS`), диск, память, Postgres, просрочка задач, сертификат, консоль, незапушенные коммиты (`MONITOR_REPOS`), журнал. Проверки проектов — `checks.d/*.sh`. `CHECK_DRY=1` — только напечатать результаты. |
+| `openrouter.sh` | Баланс OpenRouter (`openrouter_credits`): warn при остатке меньше `OPENROUTER_WARN_USD` ($5), crit — меньше `OPENROUTER_CRIT_USD` ($1). Включается `OPENROUTER_KEY_FILE`. Тесты — `openrouter.test.sh`. |
 | `summary.sh` | Утренняя сводка по категориям: проблемы целиком, остальное одной строкой на группу, задачи — «N/M в срок». Группы проверок проектов — `MONITOR_GROUPS`, короткое «ок» — `MONITOR_QUIET`. Тесты — `summary.test.sh`. |
 | `checks.d/` | Подключаемые проверки проектов; лежат в репо своих проектов (`ops/checks.d/`), ставятся копированием. |
 | `runjob.sh` | Обёртка cron-задач: запись прогона в `job_runs`, тревога при ненулевом коде. |
@@ -53,6 +54,7 @@
     HC_PING_URL=https://hc-ping.com/...
     MONITOR_GROUPS="📥 Сбор=ingest,sources;🎯 Отбор=pick_*,tg_poll_*;📢 Публикация=tg_queue"
     MONITOR_QUIET="pick_stuck tg_poll_conflict"
+    OPENROUTER_KEY_FILE=/etc/stack-radar.env   # строка OPENROUTER_API_KEY=… или файл с одним ключом
 
 ## Повторные тревоги
 

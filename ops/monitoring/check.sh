@@ -15,6 +15,7 @@
 #   MONITOR_REPOS   рабочие деревья git, где ищутся незапушенные коммиты (через пробел)
 #   MONITOR_NAME    имя хоста в сообщениях (по умолчанию hostname)
 #   CONSOLE_URL, CONSOLE_EXPECT (по умолчанию 401), CERT_PATH, HC_PING_URL — проверка выключена, если пусто
+#   OPENROUTER_KEY_FILE, OPENROUTER_WARN_USD (5), OPENROUTER_CRIT_USD (1) — баланс OpenRouter, см. openrouter.sh
 set -uo pipefail
 # shellcheck source=/dev/null  # env хоста, в репо его нет
 [ -f /etc/monitoring.env ] && . /etc/monitoring.env
@@ -138,6 +139,13 @@ if [ -n "${CONSOLE_URL:-}" ]; then
   else
     note console warn "код $code вместо $expect" "sudo nginx -t"
   fi
+fi
+
+# --- баланс OpenRouter ------------------------------------------------------
+if [ -n "${OPENROUTER_KEY_FILE:-}" ]; then
+  # shellcheck source=/dev/null  # рядом с check.sh
+  . "$(dirname "$0")/openrouter.sh"
+  openrouter_check
 fi
 
 # --- код мимо репозитория ----------------------------------------------------

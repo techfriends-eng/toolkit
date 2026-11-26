@@ -7,6 +7,9 @@
  *   с версией промпта (gotchas/llm.md#cache-key).
  * - Окончательный отказ — `null`, а не исключение: у вызывающего всегда есть запасной путь
  *   (шаблон, простая подпись). Фиктивный текст вместо ответа модели не подставляется.
+ * - Исключение — коды из `throwOn`: `ChatHttpError` с кодом и текстом провайдера. Нужно, когда отказ не
+ *   случайный и запасной путь бессмыслен: 402 OpenRouter — кончился баланс, 401/403 — ключ. Без `throwOn`
+ *   поведение прежнее, код и начало тела ответа видны в логе.
  */
 
 export type ChatCache = {
@@ -70,6 +73,31 @@ type Payload = {
   };
 };
 
+/** Отказ провайдера с кодом из `throwOn`. `body` — текст ответа, обрезанный до 500 символов. */
+export class ChatHttpError extends Error {
+  readonly status: number;
+  readonly body: string;
+  constructor(status: number, body: string) {
+    super(`HTTP ${status}${body ? `: ${body}` : ""}`);
+    this.name = "ChatHttpError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
+/** Текст ошибки провайдера: `error.message` из JSON OpenRouter/OpenAI, иначе тело как есть. */
+export function providerMessage(body: string): string {
+  try {
+    const msg = (JSON.parse(body) as { error?: { message?: unknown } }).error?.message;
+    if (typeof msg === "string" && msg) return msg;
+  } catch {
+    // не JSON — отдаём как есть
+  }
+  return body.trim();
+}
+
+const BODY_LIMIT = 500;
+
 const NO_USAGE = { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: 0 };
 
 /**
@@ -97,12 +125,18 @@ export function createChat(opts: {
   fetch?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
   log?: (line: string) => void;
+  /**
+   * Коды, на которых вызов бросает `ChatHttpError` вместо `null`, например `[401, 402, 403]`.
+   * Повторов на них нет. По умолчанию пусто — прежнее поведение.
+   */
+  throwOn?: readonly number[];
 }): ChatClient {
   const doFetch = opts.fetch ?? fetch;
   const attempts = opts.attempts ?? 3;
   const backoffMs = opts.backoffMs ?? 15_000;
   const sleep = opts.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   const log = opts.log ?? ((line: string) => console.info(`[llm] ${line}`));
+  const throwOn = new Set(opts.throwOn ?? []);
   const url = `${opts.baseUrl.replace(/\/+$/, "")}/chat/completions`;
 
   async function readCache(key: string | undefined): Promise<string | null> {
@@ -127,7 +161,7 @@ export function createChat(opts: {
 
   async function callOnce(
     req: ChatRequest,
-  ): Promise<{ result: ChatResult | null; retry: boolean }> {
+  ): Promise<{ result: ChatResult | null; retry: boolean; error?: ChatHttpError }> {
     let res: Response;
     try {
       res = await doFetch(url, {
@@ -153,7 +187,11 @@ export function createChat(opts: {
       return { result: null, retry: true };
     }
     if (!res.ok) {
-      log(`HTTP ${res.status}`);
+      const body = providerMessage(await res.text().catch(() => "")).slice(0, BODY_LIMIT);
+      log(`HTTP ${res.status}${body ? `: ${body}` : ""}`);
+      if (throwOn.has(res.status)) {
+        return { result: null, retry: false, error: new ChatHttpError(res.status, body) };
+      }
       return { result: null, retry: RETRYABLE(res.status) };
     }
     const payload = (await res.json()) as Payload;
@@ -185,7 +223,8 @@ export function createChat(opts: {
       return { text: cached, model: req.model, finishReason: "cache", usage: NO_USAGE };
     }
     for (let attempt = 1; attempt <= attempts; attempt++) {
-      const { result, retry } = await callOnce(req);
+      const { result, retry, error } = await callOnce(req);
+      if (error) throw error;
       if (result) {
         // Обрезанный ответ в кэш не кладём: следующий вызов должен получить полный.
         if (result.finishReason !== "length") await writeCache(req.cacheKey, result.text);
