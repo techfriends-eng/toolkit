@@ -140,10 +140,19 @@ if [ -n "${CONSOLE_URL:-}" ]; then
   fi
 fi
 
-# --- неотправленные коммиты --------------------------------------------------
-# Код, который живёт только на хосте, теряется вместе с хостом. Нужен upstream у ветки (@{u}).
+# --- код мимо репозитория ----------------------------------------------------
+# Код, который живёт только на хосте, теряется вместе с хостом. Считаем две беды:
+# неотправленные коммиты (нужен upstream у ветки, @{u}) и незакоммиченные правки
+# вместе с неотслеживаемыми файлами.
+#
+# Вторую половину добавили 26.11: на auto08 правка ops/publish-due.sh и новый
+# ops/claim-news.sh пролежали три дня, а проверка всё это время была зелёной -
+# она считала только коммиты. Pre-commit запрещает коммит на хосте выката, но
+# править файлы не мешает, поэтому грязное дерево там и есть главный сигнал.
 unpushed_total=0
 unpushed_where=""
+dirty_total=0
+dirty_where=""
 for repo in ${MONITOR_REPOS:-}; do
   [ -d "$repo/.git" ] || continue
   n=$(git -C "$repo" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
@@ -152,13 +161,27 @@ for repo in ${MONITOR_REPOS:-}; do
     unpushed_total=$((unpushed_total + n))
     unpushed_where="$unpushed_where $(basename "$repo"):$n"
   fi
+  # --porcelain считает и изменённые отслеживаемые, и новые файлы; игнорируемое
+  # (сборка, node_modules) сюда не попадает - его прячет .gitignore.
+  d=$(git -C "$repo" status --porcelain 2>/dev/null | grep -c . || true)
+  d=${d:-0}
+  if [ "$d" -gt 0 ] 2>/dev/null; then
+    dirty_total=$((dirty_total + d))
+    dirty_where="$dirty_where $(basename "$repo"):$d"
+  fi
 done
 if [ -n "${MONITOR_REPOS:-}" ]; then
-  if [ "$unpushed_total" -eq 0 ]; then
-    note git_unpushed ok "всё отправлено"
+  if [ "$unpushed_total" -eq 0 ] && [ "$dirty_total" -eq 0 ]; then
+    note git_unpushed ok "всё отправлено, деревья чистые"
   else
-    note git_unpushed warn "$unpushed_total коммитов не в origin -$unpushed_where" \
-      "git -C <репо> log --oneline @{u}..HEAD"
+    msg=""
+    [ "$unpushed_total" -gt 0 ] 2>/dev/null && msg="$unpushed_total коммитов не в origin -$unpushed_where"
+    if [ "$dirty_total" -gt 0 ] 2>/dev/null; then
+      [ -n "$msg" ] && msg="$msg; "
+      msg="$msg$dirty_total файлов вне коммита -$dirty_where"
+    fi
+    note git_unpushed warn "$msg" \
+      "git -C <репо> status -sb; git -C <репо> log --oneline @{u}..HEAD"
   fi
 fi
 
